@@ -112,7 +112,7 @@ th{
 .tableHeader{
   display:flex;
   align-items:center;
-  justify-content:flex-start;
+  justify-content:space-between;
   gap:10px;
   margin-bottom:8px;
 }
@@ -187,15 +187,15 @@ th{
   <!-- TABLE -->
   <div class="card">
     <div class="tableHeader">
-      <h2 style="margin:0">Aleeya Transactions</h2>
-
-      <div class="segment" aria-label="Filter Aleeya transactions">
-        <button class="segBtn active" id="fltAll" type="button">All</button>
-        <button class="segBtn" id="fltSpent" type="button">Spent</button>
-        <button class="segBtn" id="fltPaid" type="button">Paid</button>
+      <h2>Aleeya Transactions</h2>
+    
+      <div class="filterTabs">
+        <button class="tab active" data-filter="all">All</button>
+        <button class="tab" data-filter="spent">Spent</button>
+        <button class="tab" data-filter="paid">Paid</button>
       </div>
     </div>
-
+    
     <table>
       <thead>
         <tr>
