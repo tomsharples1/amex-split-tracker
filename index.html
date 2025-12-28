@@ -1,569 +1,290 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Amex Split Tracker</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Amex Split Tracker</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <style>
-    :root{
-      --bg:#0b0f19;
-      --card:rgba(255,255,255,.06);
-      --card2:rgba(255,255,255,.04);
-      --text:rgba(255,255,255,.92);
-      --muted:rgba(255,255,255,.60);
-      --border:rgba(255,255,255,.12);
+<style>
+:root{
+  --bg:#0b0f19;
+  --card:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.12);
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.6);
+  --blue:#2f7dff;
+  --blueDark:#1f56b8;
+  --pink:#ff4fb0;
+  --pinkDark:#c93686;
+}
 
-      --blue:#2f7dff;
-      --blueDark:#1f56b8;
-      --pink:#ff4fb0;
-      --pinkDark:#c93686;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto;
-      background:
-        radial-gradient(1200px 500px at 20% 0%, rgba(47,125,255,.18), transparent 60%),
-        radial-gradient(1000px 600px at 85% 25%, rgba(255,79,176,.14), transparent 60%),
-        var(--bg);
-      color:var(--text);
-    }
-    .wrap{max-width:980px;margin:18px auto;padding:0 14px}
-    header{
-      display:flex;justify-content:space-between;align-items:center;
-      margin:10px 0 12px 0;
-    }
-    h1{margin:0;font-size:18px;letter-spacing:.2px}
-    .topkey{
-      display:flex;gap:14px;font-size:12px;color:var(--muted)
-    }
-    .key{display:flex;gap:7px;align-items:center}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .blue{background:var(--blue)}
-    .pink{background:var(--pink)}
+*{box-sizing:border-box}
 
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:18px;
-      padding:14px;
-      margin-bottom:12px;
-    }
+body{
+  margin:0;
+  font-family:-apple-system,system-ui,Segoe UI,Roboto;
+  background:var(--bg);
+  color:var(--text);
+}
 
-    /* --- Mobile-friendly “app” feel --- */
-    .stack{display:grid;gap:12px}
+.wrap{
+  max-width:420px;
+  margin:0 auto;
+  padding:16px;
+}
 
-    /* Pie card layout */
-    .pieCard{
-      display:grid;
-      gap:12px;
-    }
-    .pieWrap{
-      height:240px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .pieMeta{
-      display:grid;
-      gap:10px;
-      margin-top:-2px;
-    }
-    .row2{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-    .mini{
-      background:var(--card2);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:10px 10px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .miniTop{
-      display:flex;align-items:center;justify-content:space-between;
-      gap:8px;
-      font-size:12px;color:var(--muted);
-    }
-    .nameTag{
-      display:flex;align-items:center;gap:8px;color:var(--text);
-      font-weight:650;
-    }
-    .amt{font-size:18px;font-weight:800}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:14px;
+}
 
-    /* KPI cards (Paid + Remaining) side-by-side */
-    .kpiGrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-    }
-    .kpi{
-      background:var(--card2);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:12px;
-    }
-    .kpiHead{
-      display:flex;align-items:center;justify-content:space-between;
-      gap:8px;
-      margin-bottom:8px;
-    }
-    .kpiHead .who{font-weight:800}
-    .kv{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-    }
-    .kv .label{font-size:11px;color:var(--muted)}
-    .kv .value{font-size:18px;font-weight:850;margin-top:2px}
+/* PIE CARD */
+.pieWrap{height:220px}
+.nameRow{
+  display:flex;
+  justify-content:space-between;
+  margin-top:10px;
+  font-size:14px;
+}
+.nameRow div{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+}
+.blue{background:var(--blue)}
+.pink{background:var(--pink)}
+.total{
+  font-weight:700;
+}
 
-    /* Bar chart card */
-    .chartWrap{height:290px}
+/* KPI CARDS */
+.kpiGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.kpi h3{
+  margin:0 0 6px 0;
+  font-size:14px;
+}
+.kpi .label{
+  font-size:12px;
+  color:var(--muted);
+}
+.kpi .value{
+  font-size:20px;
+  font-weight:800;
+  margin-bottom:8px;
+}
 
-    /* Table */
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    th,td{
-      padding:10px 8px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      vertical-align:top;
-    }
-    th{text-align:left;color:var(--muted);font-weight:650}
-    .badge{
-      display:inline-flex;align-items:center;
-      padding:2px 8px;border-radius:999px;
-      font-size:11px;border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.04);
-      color:rgba(255,255,255,.86);
-      white-space:nowrap;
-    }
-    .muted{color:var(--muted)}
-    .statusRow{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-      margin:6px 2px 0 2px;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .spinner{
-      width:14px;height:14px;
-      border:2px solid #555;border-top-color:#fff;border-radius:50%;
-      animation:spin .8s linear infinite;
-      display:none;
-    }
-    @keyframes spin{to{transform:rotate(360deg)}}
+/* BAR CHART */
+.barWrap{
+  height:200px;
+}
 
-    /* iPhone-ish spacing */
-    @media (max-width:420px){
-      .pieWrap{height:220px}
-      .chartWrap{height:260px}
-      .amt{font-size:17px}
-      th,td{padding:9px 6px}
-    }
-  </style>
+/* TABLE */
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+th,td{
+  padding:8px 6px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+th{
+  color:var(--muted);
+  text-align:left;
+}
+.badge{
+  font-size:11px;
+  padding:2px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);
+}
+</style>
 </head>
 
 <body>
 <div class="wrap">
-  <header>
-    <h1>Amex Split Tracker</h1>
-    <div class="topkey">
-      <div class="key"><span class="dot blue"></span>Yousef</div>
-      <div class="key"><span class="dot pink"></span>Aleeya</div>
-    </div>
-  </header>
 
-  <!-- 1) Pie chart card (top) -->
-  <div class="card pieCard">
+  <!-- PIE CARD -->
+  <div class="card">
     <div class="pieWrap">
       <canvas id="pie"></canvas>
     </div>
 
-    <div class="pieMeta">
-      <div class="row2">
-        <div class="mini">
-          <div class="miniTop">
-            <div class="nameTag"><span class="dot blue"></span>Yousef</div>
-            <span class="muted">Spent</span>
-          </div>
-          <div class="amt" id="ysSpend">£0</div>
-        </div>
-
-        <div class="mini">
-          <div class="miniTop">
-            <div class="nameTag"><span class="dot pink"></span>Aleeya</div>
-            <span class="muted">Spent</span>
-          </div>
-          <div class="amt" id="asSpend">£0</div>
-        </div>
-      </div>
-
-      <div class="statusRow">
-        <div id="status">Loading data…</div>
-        <div class="spinner" id="spin"></div>
-      </div>
+    <div class="nameRow">
+      <div><span class="dot blue"></span>Yousef <span class="total" id="ys">£0</span></div>
+      <div><span class="dot pink"></span>Aleeya <span class="total" id="as">£0</span></div>
     </div>
   </div>
 
-  <!-- 2) KPI cards (below pie) -->
+  <!-- KPI CARDS -->
   <div class="kpiGrid">
-    <div class="kpi">
-      <div class="kpiHead">
-        <div class="who"><span class="dot blue"></span> Yousef</div>
-      </div>
-      <div class="kv">
-        <div>
-          <div class="label">Paid</div>
-          <div class="value" id="yPaid">£0</div>
-        </div>
-        <div>
-          <div class="label">Remaining</div>
-          <div class="value" id="yRem">£0</div>
-        </div>
-      </div>
+    <div class="card kpi">
+      <h3>Yousef</h3>
+      <div class="label">Paid</div>
+      <div class="value" id="yp">£0</div>
+      <div class="label">Remaining</div>
+      <div class="value" id="yr">£0</div>
     </div>
 
-    <div class="kpi">
-      <div class="kpiHead">
-        <div class="who"><span class="dot pink"></span> Aleeya</div>
-      </div>
-      <div class="kv">
-        <div>
-          <div class="label">Paid</div>
-          <div class="value" id="aPaid">£0</div>
-        </div>
-        <div>
-          <div class="label">Remaining</div>
-          <div class="value" id="aRem">£0</div>
-        </div>
-      </div>
+    <div class="card kpi">
+      <h3>Aleeya</h3>
+      <div class="label">Paid</div>
+      <div class="value" id="ap">£0</div>
+      <div class="label">Remaining</div>
+      <div class="value" id="ar">£0</div>
     </div>
   </div>
 
-  <!-- 3) Monthly spending & repayment bar chart -->
-  <div class="card">
-    <div class="chartWrap">
-      <canvas id="bar"></canvas>
-    </div>
+  <!-- BAR CHART -->
+  <div class="card barWrap">
+    <canvas id="bar"></canvas>
   </div>
 
-  <!-- 4) Table: Aleeya spending & repayments (no Balance column) -->
+  <!-- TABLE -->
   <div class="card">
-    <h3 style="margin:0 0 10px 0;font-size:14px">Aleeya – spending & repayments</h3>
-    <div style="overflow-x:auto">
-      <table>
-        <thead>
-          <tr>
-            <th style="min-width:90px">Date</th>
-            <th style="min-width:70px">Type</th>
-            <th>Description</th>
-            <th style="min-width:95px">Amount</th>
-          </tr>
-        </thead>
-        <tbody id="aLedger"></tbody>
-      </table>
-    </div>
+    <h3 style="margin:0 0 10px 0">Aleeya – spending & repayments</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody id="ledger"></tbody>
+    </table>
   </div>
 
 </div>
 
 <script>
-  const $ = (id) => document.getElementById(id);
-  const GBP = (n) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n);
+const GBP=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(n);
 
-  let pieChart = null;
-  let barChart = null;
+async function loadCSV(path){
+  const r = await fetch(path);
+  const t = await r.text();
+  return Papa.parse(t,{header:true,skipEmptyLines:true}).data;
+}
 
-  // --- Fetch + parse CSV ---
-  async function fetchCSV(path){
-    const res = await fetch(path, { cache: "no-store" });
-    if(!res.ok) throw new Error(`Failed to fetch ${path} (${res.status})`);
-    const text = await res.text();
-    const parsed = Papa.parse(text, { header:true, skipEmptyLines:true });
-    if(parsed.errors?.length) {
-      // Keep going; surface the first error for visibility
-      console.warn("PapaParse errors:", parsed.errors);
-    }
-    return parsed.data;
-  }
+const parseDate=d=>{
+  const p=d.split(/[\/-]/);
+  return new Date(p[2],p[1]-1,p[0]);
+};
 
-  const parseDate = (s) => {
-    if(!s) return null;
-    const p = String(s).trim().split(/[\/-]/);
-    if(p.length !== 3) return null;
-    const d = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
-    return isNaN(d.getTime()) ? null : d;
-  };
+(async()=>{
+  const activity = await loadCSV("data/activity.csv");
+  const payments = await loadCSV("data/payments.csv");
 
-  const monthKey = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-  const yieldToUI = () => new Promise(r => setTimeout(r, 0));
+  let ySpend=0, aSpend=0, yPaid=0, aPaid=0;
+  let ledger=[];
+  let monthly={};
 
-  // --- Refund pairing (bucketed by abs amount) ---
-  function tokens(desc){
-    // Keep merchant identity (AMAZON/AMZN), remove only generic noise
-    const noise = new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
-    return String(desc || "")
-      .toUpperCase()
-      .replace(/[^A-Z0-9 ]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .split(" ")
-      .filter(t => t.length >= 3 && !noise.has(t));
-  }
+  /* ALEEYA PAYMENTS */
+  payments.forEach(r=>{
+    const amt=Math.abs(+r.Amount);
+    const d=parseDate(r.Date);
+    aPaid+=amt;
+    const m=d.getFullYear()+"-"+(d.getMonth()+1);
+    monthly[m]??={ys:0,as:0,yp:0,ap:0};
+    monthly[m].ap+=amt;
+    ledger.push({d,type:"Paid",desc:"Repayment",amt:-amt});
+  });
 
-  function similarityFromTokenSets(A, B){
-    if(!A.size || !B.size) return 0;
-    let inter = 0;
-    for(const t of A) if(B.has(t)) inter++;
-    return inter / Math.min(A.size, B.size);
-  }
+  /* ACTIVITY */
+  activity.forEach(r=>{
+    const amt=+r.Amount;
+    const d=parseDate(r.Date);
+    const m=d.getFullYear()+"-"+(d.getMonth()+1);
+    monthly[m]??={ys:0,as:0,yp:0,ap:0};
+    const isAleeya=/ALEEYA/i.test(r["Card Member"]||"");
 
-  async function stripRefundPairsBucketed(rows, setStatusCb){
-    const buckets = new Map();
-    const meta = new Array(rows.length);
-
-    for(let i=0;i<rows.length;i++){
-      const amt = Number(rows[i].Amount);
-      if(!amt || isNaN(amt)) { meta[i]=null; continue; }
-      const key = Math.round(Math.abs(amt)*100); // pennies
-      const tset = new Set(tokens(rows[i].Description));
-      meta[i] = { amt, key, tset };
-      if(!buckets.has(key)) buckets.set(key, { pos:[], neg:[] });
-      (amt > 0 ? buckets.get(key).pos : buckets.get(key).neg).push(i);
-    }
-
-    const used = new Set();
-    let removedPairs = 0;
-    const keys = Array.from(buckets.keys());
-
-    for(let bi=0; bi<keys.length; bi++){
-      const bucket = buckets.get(keys[bi]);
-      const pos = bucket.pos.filter(i => !used.has(i));
-      const neg = bucket.neg.filter(i => !used.has(i));
-
-      if(pos.length && neg.length){
-        for(const ni of neg){
-          if(used.has(ni)) continue;
-          const nMeta = meta[ni];
-          let bestIdx = -1;
-          let bestScore = 0;
-
-          for(const pi of pos){
-            if(used.has(pi)) continue;
-            const pMeta = meta[pi];
-            const score = similarityFromTokenSets(pMeta.tset, nMeta.tset);
-            if(score > bestScore){
-              bestScore = score;
-              bestIdx = pi;
-            }
-          }
-
-          if(bestIdx !== -1 && bestScore >= 0.55){
-            used.add(ni);
-            used.add(bestIdx);
-            removedPairs++;
-          }
-        }
+    if(amt>0){
+      if(isAleeya){
+        aSpend+=amt;
+        monthly[m].as+=amt;
+        ledger.push({d,type:"Spent",desc:r.Description,amt});
+      }else{
+        ySpend+=amt;
+        monthly[m].ys+=amt;
       }
-
-      if(bi % 40 === 0){
-        setStatusCb?.(`Removing refund pairs… (${bi}/${keys.length})`);
-        await yieldToUI();
-      }
+    }else if(!isAleeya && /PAYMENT/i.test(r.Description)){
+      yPaid+=Math.abs(amt);
+      monthly[m].yp+=Math.abs(amt);
     }
+  });
 
-    const cleaned = [];
-    for(let i=0;i<rows.length;i++){
-      if(!used.has(i)) cleaned.push(rows[i]);
+  /* REMOVE ALEEYA PAYMENTS FROM YOUSEF */
+  yPaid=Math.max(0,yPaid-aPaid);
+
+  /* KPIs */
+  document.getElementById("ys").textContent=GBP(ySpend);
+  document.getElementById("as").textContent=GBP(aSpend);
+  document.getElementById("yp").textContent=GBP(yPaid);
+  document.getElementById("yr").textContent=GBP(ySpend-yPaid);
+  document.getElementById("ap").textContent=GBP(aPaid);
+  document.getElementById("ar").textContent=GBP(aSpend-aPaid);
+
+  /* PIE */
+  new Chart(document.getElementById("pie"),{
+    type:"doughnut",
+    data:{
+      datasets:[{
+        data:[ySpend,aSpend],
+        backgroundColor:["#2f7dff","#ff4fb0"],
+        borderWidth:0,
+        spacing:4,
+        borderRadius:10
+      }]
+    },
+    options:{cutout:"70%",plugins:{legend:{display:false}}}
+  });
+
+  /* BAR */
+  const labels=Object.keys(monthly).sort();
+  new Chart(document.getElementById("bar"),{
+    type:"bar",
+    data:{
+      labels,
+      datasets:[
+        {data:labels.map(m=>monthly[m].ys),backgroundColor:"#2f7dff",borderRadius:6},
+        {data:labels.map(m=>monthly[m].yp),backgroundColor:"#1f56b8",borderRadius:6},
+        {data:labels.map(m=>monthly[m].as),backgroundColor:"#ff4fb0",borderRadius:6},
+        {data:labels.map(m=>monthly[m].ap),backgroundColor:"#c93686",borderRadius:6}
+      ]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{x:{display:false},y:{display:false}}
     }
-    return { cleaned, removedPairs };
-  }
+  });
 
-  // --- Core computation ---
-  async function run(){
-    const setStatus = (t) => $("status").textContent = t;
-    $("spin").style.display = "inline-block";
-
-    try{
-      setStatus("Fetching CSVs…");
-      const [activityRaw, paymentsRaw] = await Promise.all([
-        fetchCSV("data/activity.csv"),
-        fetchCSV("data/payments.csv"),
-      ]);
-
-      setStatus("Removing refund pairs…");
-      const { cleaned: activity, removedPairs } = await stripRefundPairsBucketed(activityRaw, setStatus);
-
-      // Payments CSV (Aleeya reimbursements)
-      let aPaidTotal = 0;
-      const aleeyaPayments = [];
-      const monthly = {}; // month -> { ys, as, ypg, ap }
-
-      for(const r of paymentsRaw){
-        const amt = Math.abs(Number(r.Amount));
-        const d = parseDate(r.Date);
-        if(!d || isNaN(amt)) continue;
-        aPaidTotal += amt;
-        const m = monthKey(d);
-        monthly[m] ??= { ys:0, as:0, ypg:0, ap:0 };
-        monthly[m].ap += amt;
-        aleeyaPayments.push({ d, type:"Paid", desc:"Repayment", amtSigned: -amt });
-      }
-
-      // Activity CSV: spends by card member + YOUR Amex payments (gross)
-      let ySpendTotal = 0;
-      let aSpendTotal = 0;
-      let yPaidGrossTotal = 0;
-
-      const aleeyaSpends = [];
-
-      for(const r of activity){
-        const amt = Number(r.Amount);
-        const d = parseDate(r.Date);
-        if(!d || isNaN(amt)) continue;
-
-        const member = String(r["Card Member"] || "");
-        const isAleeya = /ALEEYA/i.test(member);
-        const desc = String(r.Description || "");
-        const m = monthKey(d);
-        monthly[m] ??= { ys:0, as:0, ypg:0, ap:0 };
-
-        if(amt > 0){
-          if(isAleeya){
-            aSpendTotal += amt;
-            monthly[m].as += amt;
-            aleeyaSpends.push({ d, type:"Spent", desc, amtSigned: +amt });
-          }else{
-            ySpendTotal += amt;
-            monthly[m].ys += amt;
-          }
-        }else{
-          // YOUR Amex payments show up as negative "PAYMENT" rows.
-          // We treat these as Your gross payments. We will NET Aleeya reimbursements out to avoid double counting.
-          if(!isAleeya && /PAYMENT/i.test(desc)){
-            const p = Math.abs(amt);
-            yPaidGrossTotal += p;
-            monthly[m].ypg += p;
-          }
-        }
-      }
-
-      // ✅ “Remove all payments I made on Aleeya’s behalf” = Net Yousef paid by subtracting Aleeya reimbursements
-      const yPaidNetTotal = Math.max(0, yPaidGrossTotal - aPaidTotal);
-
-      const yRemaining = Math.max(0, ySpendTotal - yPaidNetTotal);
-      const aRemaining = Math.max(0, aSpendTotal - aPaidTotal);
-
-      // Update spend under pie
-      $("ysSpend").textContent = GBP(ySpendTotal);
-      $("asSpend").textContent = GBP(aSpendTotal);
-
-      // Update KPI cards
-      $("yPaid").textContent = GBP(yPaidNetTotal);
-      $("yRem").textContent  = GBP(yRemaining);
-      $("aPaid").textContent = GBP(aPaidTotal);
-      $("aRem").textContent  = GBP(aRemaining);
-
-      // Pie chart (no legend), gap + rounded
-      pieChart?.destroy();
-      pieChart = new Chart($("pie"), {
-        type: "doughnut",
-        data: {
-          labels: ["Yousef", "Aleeya"],
-          datasets: [{
-            data: [ySpendTotal, aSpendTotal],
-            backgroundColor: ["#2f7dff", "#ff4fb0"],
-            borderWidth: 0,
-            spacing: 6,        // gap between sectors
-            borderRadius: 10,  // rounded sector ends
-            cutout: "72%",
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } }
-        }
-      });
-
-      // Monthly series
-      const labels = Object.keys(monthly).sort();
-      const ys = labels.map(m => monthly[m].ys);
-      const as = labels.map(m => monthly[m].as);
-      const ap = labels.map(m => monthly[m].ap);
-
-      // Net Yousef paid PER MONTH too (prevents “double counting” visually)
-      const yp = labels.map(m => Math.max(0, monthly[m].ypg - monthly[m].ap));
-
-      // Bar chart: no legend + rounded bars
-      barChart?.destroy();
-      barChart = new Chart($("bar"), {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [
-            { label: "Yousef spend", data: ys, backgroundColor: "#2f7dff", borderRadius: 8, borderSkipped: false },
-            { label: "Yousef paid",  data: yp, backgroundColor: "#1f56b8", borderRadius: 8, borderSkipped: false },
-            { label: "Aleeya spend", data: as, backgroundColor: "#ff4fb0", borderRadius: 8, borderSkipped: false },
-            { label: "Aleeya paid",  data: ap, backgroundColor: "#c93686", borderRadius: 8, borderSkipped: false },
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }, // ✅ remove legend
-            tooltip: { enabled: true }
-          },
-          scales: {
-            x: {
-              ticks: { color: "rgba(255,255,255,.7)" },
-              grid: { color: "rgba(255,255,255,.06)" }
-            },
-            y: {
-              ticks: { color: "rgba(255,255,255,.7)" },
-              grid: { color: "rgba(255,255,255,.06)" }
-            }
-          }
-        }
-      });
-
-      // Table: Aleeya spends + Aleeya repayments (no balance column)
-      const ledger = [...aleeyaSpends, ...aleeyaPayments].sort((a,b) => a.d - b.d);
-
-      $("aLedger").innerHTML = ledger.map(ev => {
-        const safeDesc = String(ev.desc)
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;");
-
-        return `
-          <tr>
-            <td>${ev.d.toLocaleDateString("en-GB")}</td>
-            <td><span class="badge">${ev.type}</span></td>
-            <td>${safeDesc}</td>
-            <td>${GBP(ev.amtSigned)}</td>
-          </tr>
-        `;
-      }).join("");
-
-      setStatus(`Done • refund pairs removed: ${removedPairs}`);
-    }catch(e){
-      console.error(e);
-      $("status").textContent = "Error";
-      alert(e.message || "Something went wrong. Check console.");
-    }finally{
-      $("spin").style.display = "none";
-    }
-  }
-
-  // Auto-run on load (dynamic)
-  window.addEventListener("load", run);
+  /* TABLE */
+  ledger.sort((a,b)=>a.d-b.d);
+  document.getElementById("ledger").innerHTML=
+    ledger.map(r=>`
+      <tr>
+        <td>${r.d.toLocaleDateString("en-GB")}</td>
+        <td><span class="badge">${r.type}</span></td>
+        <td>${r.desc}</td>
+        <td>${GBP(r.amt)}</td>
+      </tr>`).join("");
+})();
 </script>
 </body>
 </html>
