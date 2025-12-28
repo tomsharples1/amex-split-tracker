@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Amex Split Tracker</title>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -10,196 +10,239 @@
 
 <style>
 :root{
-  --bg:#0b0f19;--card:rgba(255,255,255,.06);--card2:rgba(255,255,255,.04);
-  --text:rgba(255,255,255,.92);--muted:rgba(255,255,255,.6);
+  --bg:#0b0f19;
+  --card:rgba(255,255,255,.06);
   --border:rgba(255,255,255,.12);
-  --blue:#2f7dff;--blueDark:#1f56b8;
-  --pink:#ff4fb0;--pinkDark:#c93686;
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.6);
+  --blue:#2f7dff;
+  --blueDark:#1f56b8;
+  --pink:#ff4fb0;
+  --pinkDark:#c93686;
 }
 *{box-sizing:border-box}
 body{
-  margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto;
-  background:
-    radial-gradient(1200px 500px at 20% 0%, rgba(47,125,255,.18), transparent 60%),
-    radial-gradient(1000px 600px at 85% 25%, rgba(255,79,176,.14), transparent 60%),
-    var(--bg);
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:var(--bg);
   color:var(--text);
 }
-.wrap{max-width:1100px;margin:24px auto;padding:0 16px}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-h1{margin:0;font-size:20px}
-.topkey{display:flex;gap:16px;font-size:13px;color:var(--muted)}
-.key{display:flex;gap:6px;align-items:center}
-.dot{width:10px;height:10px;border-radius:50%}
-.blue{background:var(--blue)} .pink{background:var(--pink)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
-.grid{display:grid;grid-template-columns:1fr;gap:14px}
-@media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
-.pieWrap{height:260px;display:flex;align-items:center;justify-content:center}
-.kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.kpi{background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:14px}
-.who{font-weight:700;margin-bottom:6px}
-.big{font-size:30px;font-weight:800}
-.sub{font-size:12px;color:var(--muted)}
-.mid{font-size:22px;font-weight:700;margin-top:6px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
-th{text-align:left;color:var(--muted)}
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
+.wrap{
+  max-width:420px;
+  margin:0 auto;
+  padding:16px;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:14px;
+}
+h1{
+  font-size:18px;
+  margin:0 0 12px 0;
+}
+.row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.name{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:600;
+}
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+}
+.blue{background:var(--blue)}
+.pink{background:var(--pink)}
+.big{
+  font-size:26px;
+  font-weight:800;
+}
+.sub{
+  font-size:12px;
+  color:var(--muted);
+}
+.kpiRow{
+  display:flex;
+  justify-content:space-between;
+  margin-top:8px;
+}
+canvas{
+  max-width:100%;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+th,td{
+  padding:8px 6px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+th{
+  text-align:left;
+  color:var(--muted);
+}
+.badge{
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:11px;
+  background:rgba(255,255,255,.08);
+}
 </style>
 </head>
 
 <body>
 <div class="wrap">
-<header>
   <h1>Amex Split Tracker</h1>
-  <div class="topkey">
-    <div class="key"><span class="dot blue"></span>Yousef</div>
-    <div class="key"><span class="dot pink"></span>Aleeya</div>
-  </div>
-</header>
 
-<div class="grid">
-  <div class="card"><div class="pieWrap"><canvas id="pie"></canvas></div></div>
+  <!-- PIE CARD -->
   <div class="card">
-    <div class="kpis">
-      <div class="kpi"><div class="who">Yousef</div><div class="sub">Spent</div><div class="big" id="ys">£0</div><div class="sub">Paid</div><div class="mid" id="yp">£0</div><div class="sub">Remaining</div><div class="mid" id="yr">£0</div></div>
-      <div class="kpi"><div class="who">Aleeya</div><div class="sub">Spent</div><div class="big" id="as">£0</div><div class="sub">Paid</div><div class="mid" id="ap">£0</div><div class="sub">Remaining</div><div class="mid" id="ar">£0</div></div>
+    <canvas id="pie" height="220"></canvas>
+
+    <div style="margin-top:12px">
+      <div class="row">
+        <div class="name"><span class="dot blue"></span>Yousef</div>
+        <div class="name"><span class="dot pink"></span>Aleeya</div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <div class="sub">Total Amex spend</div>
+        <div class="big" id="totalSpend">£0</div>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="card"><canvas id="bar"></canvas></div>
+  <!-- YOUSEF KPI -->
+  <div class="card">
+    <div class="name"><span class="dot blue"></span>Yousef</div>
+    <div class="kpiRow">
+      <div>
+        <div class="sub">Paid</div>
+        <div class="big" id="yPaid">£0</div>
+      </div>
+      <div>
+        <div class="sub">Remaining</div>
+        <div class="big" id="yRemain">£0</div>
+      </div>
+    </div>
+  </div>
 
-<div class="card">
-  <h3 style="margin:0 0 10px 0">Aleeya – spending & repayments</h3>
-  <table>
-    <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Balance</th></tr></thead>
-    <tbody id="aLedger"></tbody>
-  </table>
-</div>
+  <!-- ALEEYA KPI -->
+  <div class="card">
+    <div class="name"><span class="dot pink"></span>Aleeya</div>
+    <div class="kpiRow">
+      <div>
+        <div class="sub">Paid</div>
+        <div class="big" id="aPaid">£0</div>
+      </div>
+      <div>
+        <div class="sub">Remaining</div>
+        <div class="big" id="aRemain">£0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card">
+    <h3 style="margin:0 0 10px 0">Aleeya – spending & repayments</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody id="ledger"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-const $=id=>document.getElementById(id);
-const GBP=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(n);
-let pieChart=null, barChart=null;
+const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(n);
 
-const loadCSV = url =>
-  fetch(url).then(r=>{
-    if(!r.ok) throw new Error(`Failed to load ${url}`);
-    return r.text();
-  }).then(t=>Papa.parse(t,{header:true,skipEmptyLines:true}).data);
-
-const parseDate=s=>{
-  const p=String(s||"").split(/[\/-]/);
-  if(p.length!==3) return null;
-  const d=new Date(p[2],p[1]-1,p[0]);
-  return isNaN(d)?null:d;
-};
-const monthKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-
-function tokens(desc){
-  const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
-  return String(desc||"").toUpperCase()
-    .replace(/[^A-Z0-9 ]/g," ")
-    .split(/\s+/).filter(t=>t.length>=3 && !noise.has(t));
-}
-function similarity(A,B){
-  if(!A.size||!B.size) return 0;
-  let i=0; for(const t of A) if(B.has(t)) i++;
-  return i/Math.min(A.size,B.size);
+async function loadCSV(path){
+  const res = await fetch(path);
+  const text = await res.text();
+  return Papa.parse(text,{header:true,skipEmptyLines:true}).data;
 }
 
-async function stripRefundPairs(rows){
-  const buckets=new Map(), meta=[];
-  rows.forEach((r,i)=>{
-    const amt=Number(r.Amount);
-    if(!amt) return;
-    const k=Math.round(Math.abs(amt)*100);
-    const t=new Set(tokens(r.Description));
-    meta[i]={amt,k,t};
-    if(!buckets.has(k)) buckets.set(k,{p:[],n:[]});
-    (amt>0?buckets.get(k).p:buckets.get(k).n).push(i);
-  });
-  const used=new Set();
-  for(const b of buckets.values()){
-    for(const ni of b.n){
-      if(used.has(ni)) continue;
-      let best=null,score=0;
-      for(const pi of b.p){
-        if(used.has(pi)) continue;
-        const s=similarity(meta[ni].t,meta[pi].t);
-        if(s>score){score=s;best=pi;}
+function parseDate(s){
+  const [d,m,y] = s.split(/[\/-]/);
+  return new Date(y,m-1,d);
+}
+
+(async function init(){
+  const activity = await loadCSV("data/activity.csv");
+  const payments = await loadCSV("data/aleeya_payments.csv");
+
+  let ySpend=0, aSpend=0, yPaid=0, aPaid=0;
+  let ledger=[];
+
+  for(const r of payments){
+    const amt=Math.abs(+r.Amount);
+    aPaid+=amt;
+    ledger.push({date:r.Date,type:"Paid",desc:"Repayment",amt:-amt});
+  }
+
+  for(const r of activity){
+    const amt=+r.Amount;
+    if(!amt) continue;
+    const isAleeya=/ALEEYA/i.test(r["Card Member"]||"");
+
+    if(amt>0){
+      if(isAleeya){
+        aSpend+=amt;
+        ledger.push({date:r.Date,type:"Spent",desc:r.Description,amt});
+      }else{
+        ySpend+=amt;
       }
-      if(best!==null && score>=0.55){used.add(ni);used.add(best);}
+    }else if(/PAYMENT/i.test(r.Description||"") && !isAleeya){
+      yPaid+=Math.abs(amt);
     }
   }
-  return rows.filter((_,i)=>!used.has(i));
-}
 
-(async ()=>{
-  const activity=await loadCSV("data/activity.csv");
-  const payments=await loadCSV("data/payments.csv");
+  const totalSpend = ySpend + aSpend;
 
-  const clean=await stripRefundPairs(activity);
+  document.getElementById("totalSpend").textContent = GBP(totalSpend);
+  document.getElementById("yPaid").textContent = GBP(yPaid);
+  document.getElementById("yRemain").textContent = GBP(Math.max(0,ySpend-yPaid));
+  document.getElementById("aPaid").textContent = GBP(aPaid);
+  document.getElementById("aRemain").textContent = GBP(Math.max(0,aSpend-aPaid));
 
-  let yS=0,aS=0,yPG=0,aP=0,monthly={},aEvents=[];
-
-  payments.forEach(r=>{
-    const amt=Math.abs(Number(r.Amount)); if(!amt) return;
-    const d=parseDate(r.Date); if(!d) return;
-    aP+=amt; const m=monthKey(d);
-    monthly[m]??={ys:0,as:0,yp:0,ap:0}; monthly[m].ap+=amt;
-    aEvents.push({d,t:"Paid",a:-amt,desc:"Repayment"});
-  });
-
-  clean.forEach(r=>{
-    const amt=Number(r.Amount); if(!amt) return;
-    const d=parseDate(r.Date); if(!d) return;
-    const m=monthKey(d);
-    monthly[m]??={ys:0,as:0,yp:0,ap:0};
-    const isA=/ALEEYA/i.test(r["Card Member"]||"");
-    if(amt>0){
-      if(isA){aS+=amt;monthly[m].as+=amt;aEvents.push({d,t:"Spent",a:amt,desc:r.Description});}
-      else{yS+=amt;monthly[m].ys+=amt;}
-    }else if(!isA && /PAYMENT/i.test(r.Description)){
-      yPG+=Math.abs(amt); monthly[m].yp+=Math.abs(amt);
-    }
-  });
-
-  const yP=Math.max(0,yPG-aP);
-
-  $("ys").textContent=GBP(yS);
-  $("yp").textContent=GBP(yP);
-  $("yr").textContent=GBP(Math.max(0,yS-yP));
-  $("as").textContent=GBP(aS);
-  $("ap").textContent=GBP(aP);
-  $("ar").textContent=GBP(Math.max(0,aS-aP));
-
-  pieChart=new Chart($("pie"),{
+  new Chart(document.getElementById("pie"),{
     type:"doughnut",
-    data:{datasets:[{data:[yS,aS],backgroundColor:["#2f7dff","#ff4fb0"],borderWidth:0,spacing:4,borderRadius:10,cutout:"70%"}]},
+    data:{
+      datasets:[{
+        data:[ySpend,aSpend],
+        backgroundColor:["#2f7dff","#ff4fb0"],
+        borderWidth:0,
+        spacing:4,
+        borderRadius:10,
+        cutout:"70%"
+      }]
+    },
     options:{plugins:{legend:{display:false}}}
   });
 
-  const labels=Object.keys(monthly).sort();
-  barChart=new Chart($("bar"),{
-    type:"bar",
-    data:{labels,datasets:[
-      {label:"Yousef spend",data:labels.map(m=>monthly[m].ys),backgroundColor:"#2f7dff",borderRadius:8},
-      {label:"Yousef paid",data:labels.map(m=>Math.max(0,monthly[m].yp-monthly[m].ap)),backgroundColor:"#1f56b8",borderRadius:8},
-      {label:"Aleeya spend",data:labels.map(m=>monthly[m].as),backgroundColor:"#ff4fb0",borderRadius:8},
-      {label:"Aleeya paid",data:labels.map(m=>monthly[m].ap),backgroundColor:"#c93686",borderRadius:8}
-    ]}
-  });
-
-  aEvents.sort((a,b)=>a.d-b.d);
-  let bal=0;
-  $("aLedger").innerHTML=aEvents.map(e=>{
-    bal+=e.a;
-    return `<tr><td>${e.d.toLocaleDateString("en-GB")}</td><td><span class="badge">${e.t}</span></td><td>${e.desc}</td><td>${GBP(e.a)}</td><td>${GBP(bal)}</td></tr>`;
-  }).join("");
+  ledger.sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+  document.getElementById("ledger").innerHTML =
+    ledger.map(l=>`
+      <tr>
+        <td>${l.date}</td>
+        <td><span class="badge">${l.type}</span></td>
+        <td>${l.desc}</td>
+        <td>${GBP(l.amt)}</td>
+      </tr>`).join("");
 })();
 </script>
 </body>
