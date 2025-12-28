@@ -20,7 +20,6 @@
   --pink:#ff4fb0;
   --pinkDark:#c93686;
 }
-
 *{box-sizing:border-box}
 body{
   margin:0;
@@ -28,18 +27,7 @@ body{
   background:var(--bg);
   color:var(--text);
 }
-
-.wrap{
-  max-width:480px;
-  margin:0 auto;
-  padding:16px;
-}
-
-h1,h2,h3{
-  margin:0 0 12px 0;
-  font-weight:700;
-}
-
+.wrap{max-width:480px;margin:0 auto;padding:16px}
 .card{
   background:var(--card);
   border:1px solid var(--border);
@@ -47,7 +35,6 @@ h1,h2,h3{
   padding:16px;
   margin-bottom:14px;
 }
-
 .row{
   display:flex;
   justify-content:space-between;
@@ -55,121 +42,74 @@ h1,h2,h3{
   margin-top:8px;
   font-size:14px;
 }
-
-.dot{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  display:inline-block;
-  margin-right:6px;
-}
-
-.kpiGrid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-
-.kpi{
-  text-align:center;
-}
-
-.big{
-  font-size:26px;
-  font-weight:800;
-}
-
-.mid{
-  font-size:18px;
-  font-weight:700;
-  margin-top:6px;
-}
-
-.sub{
-  font-size:12px;
-  color:var(--muted);
-}
-
-canvas{
-  max-width:100%;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:12px;
-}
-
-th,td{
-  padding:8px;
-  border-bottom:1px solid rgba(255,255,255,.08);
-}
-
-th{
-  text-align:left;
-  color:var(--muted);
-}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.kpiGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpi{text-align:center}
+.big{font-size:26px;font-weight:800}
+.mid{font-size:18px;font-weight:700}
+.sub{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
+th{text-align:left;color:var(--muted)}
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
-  <!-- PIE CARD -->
-  <div class="card">
-    <h2>Spending</h2>
-    <canvas id="pie" height="220"></canvas>
-
-    <div class="row">
-      <div><span class="dot" style="background:var(--blue)"></span>Yousef</div>
-      <div id="ys">£0</div>
-    </div>
-    <div class="row">
-      <div><span class="dot" style="background:var(--pink)"></span>Aleeya</div>
-      <div id="as">£0</div>
-    </div>
+<!-- PIE -->
+<div class="card">
+  <h2>Spending</h2>
+  <canvas id="pie" height="220"></canvas>
+  <div class="row">
+    <div><span class="dot" style="background:var(--blue)"></span>Yousef</div>
+    <div id="ys">£0</div>
   </div>
-
-  <!-- KPI CARDS -->
-  <div class="kpiGrid">
-    <div class="card kpi">
-      <h3>Yousef</h3>
-      <div class="sub">Paid</div>
-      <div class="mid" id="yp">£0</div>
-      <div class="sub">Remaining</div>
-      <div class="mid" id="yr">£0</div>
-    </div>
-
-    <div class="card kpi">
-      <h3>Aleeya</h3>
-      <div class="sub">Paid</div>
-      <div class="mid" id="ap">£0</div>
-      <div class="sub">Remaining</div>
-      <div class="mid" id="ar">£0</div>
-    </div>
+  <div class="row">
+    <div><span class="dot" style="background:var(--pink)"></span>Aleeya</div>
+    <div id="as">£0</div>
   </div>
+</div>
 
-  <!-- BAR CHART -->
-  <div class="card">
-    <h2>Monthly Recap</h2>
-    <canvas id="bar" height="180"></canvas>
+<!-- KPIs -->
+<div class="kpiGrid">
+  <div class="card kpi">
+    <h3>Yousef</h3>
+    <div class="sub">Paid</div>
+    <div class="mid" id="yp">£0</div>
+    <div class="sub">Remaining</div>
+    <div class="mid" id="yr">£0</div>
   </div>
+  <div class="card kpi">
+    <h3>Aleeya</h3>
+    <div class="sub">Paid</div>
+    <div class="mid" id="ap">£0</div>
+    <div class="sub">Remaining</div>
+    <div class="mid" id="ar">£0</div>
+  </div>
+</div>
 
-  <!-- TABLE -->
-  <div class="card">
-    <h2>Aleeya Transactions</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody id="aLedger"></tbody>
-    </table>
-  </div>
+<!-- BAR -->
+<div class="card">
+  <h2>Monthly Recap</h2>
+  <canvas id="bar" height="180"></canvas>
+</div>
+
+<!-- TABLE -->
+<div class="card">
+  <h2>Aleeya Transactions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody id="aLedger"></tbody>
+  </table>
+</div>
 
 </div>
 
@@ -188,83 +128,104 @@ async function loadCSV(path){
   return Papa.parse(text,{header:true,skipEmptyLines:true}).data;
 }
 
+/* ---------- REFUND LOGIC ---------- */
+function tokenize(desc){
+  const noise = new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
+  return String(desc||"")
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g," ")
+    .split(" ")
+    .filter(t=>t.length>=3 && !noise.has(t));
+}
+
+function similarity(a,b){
+  const A=new Set(a), B=new Set(b);
+  let i=0; A.forEach(t=>B.has(t)&&i++);
+  return i/Math.min(A.size,B.size||1);
+}
+
+function stripRefunds(rows){
+  const used=new Set(), buckets={};
+  rows.forEach((r,i)=>{
+    const amt=Math.round(Math.abs(Number(r.Amount))*100);
+    if(!amt) return;
+    buckets[amt]??={pos:[],neg:[]};
+    (Number(r.Amount)>0?buckets[amt].pos:buckets[amt].neg).push(i);
+  });
+
+  Object.values(buckets).forEach(({pos,neg})=>{
+    neg.forEach(n=>{
+      if(used.has(n)) return;
+      const nt=tokenize(rows[n].Description);
+      pos.forEach(p=>{
+        if(used.has(p)) return;
+        if(similarity(nt,tokenize(rows[p].Description))>=0.55){
+          used.add(n); used.add(p);
+        }
+      });
+    });
+  });
+
+  return rows.filter((_,i)=>!used.has(i));
+}
+
+/* ---------- MAIN ---------- */
 (async function(){
-  const activity = await loadCSV("data/activity.csv");
+  let activity = await loadCSV("data/activity.csv");
   const payments = await loadCSV("data/payments.csv");
 
-  let ySpend=0, aSpend=0, yPaid=0, aPaid=0;
-  let monthly = {};
-  let aRows = [];
+  activity = stripRefunds(activity);
 
-  // Aleeya repayments
+  let ySpend=0,aSpend=0,yPaid=0,aPaid=0;
+  let monthly={}, aRows=[];
+
   payments.forEach(r=>{
-    const amt = Math.abs(Number(r.Amount));
-    const d = parseDate(r.Date);
-    aPaid += amt;
-    const m = d.getFullYear()+"-"+(d.getMonth()+1);
-    monthly[m] ??= {ys:0, yp:0, as:0, ap:0};
-    monthly[m].ap += amt;
-
+    const amt=Math.abs(Number(r.Amount));
+    const d=parseDate(r.Date);
+    aPaid+=amt;
+    const m=d.getFullYear()+"-"+(d.getMonth()+1);
+    monthly[m]??={ys:0,yp:0,as:0,ap:0};
+    monthly[m].ap+=amt;
     aRows.push({d,type:"Paid",desc:"Repayment",amt:-amt});
   });
 
-  // Activity
   activity.forEach(r=>{
-    const amt = Number(r.Amount);
-    const d = parseDate(r.Date);
-    const m = d.getFullYear()+"-"+(d.getMonth()+1);
-    monthly[m] ??= {ys:0, yp:0, as:0, ap:0};
+    const amt=Number(r.Amount);
+    const d=parseDate(r.Date);
+    const m=d.getFullYear()+"-"+(d.getMonth()+1);
+    monthly[m]??={ys:0,yp:0,as:0,ap:0};
 
-    const isAleeya = /ALEEYA/i.test(r["Card Member"]||"");
-    const desc = r.Description || "";
+    const isAleeya=/ALEEYA/i.test(r["Card Member"]||"");
 
     if(amt>0){
       if(isAleeya){
-        aSpend += amt;
-        monthly[m].as += amt;
-        aRows.push({d,type:"Spent",desc,amt});
+        aSpend+=amt; monthly[m].as+=amt;
+        aRows.push({d,type:"Spent",desc:r.Description,amt});
       } else {
-        ySpend += amt;
-        monthly[m].ys += amt;
+        ySpend+=amt; monthly[m].ys+=amt;
       }
-    }
-    else if(!isAleeya && /PAYMENT/i.test(desc)){
-      yPaid += Math.abs(amt);
-      monthly[m].yp += Math.abs(amt);
+    } else if(!isAleeya && /PAYMENT/i.test(r.Description||"")){
+      yPaid+=Math.abs(amt); monthly[m].yp+=Math.abs(amt);
     }
   });
 
-  // Remove your payments for Aleeya
-  yPaid = Math.max(0, yPaid - aPaid);
+  yPaid=Math.max(0,yPaid-aPaid);
 
-  // KPIs
-  document.getElementById("ys").textContent = GBP(ySpend);
-  document.getElementById("as").textContent = GBP(aSpend);
-  document.getElementById("yp").textContent = GBP(yPaid);
-  document.getElementById("yr").textContent = GBP(ySpend - yPaid);
-  document.getElementById("ap").textContent = GBP(aPaid);
-  document.getElementById("ar").textContent = GBP(aSpend - aPaid);
+  ys.textContent=GBP(ySpend);
+  as.textContent=GBP(aSpend);
+  yp.textContent=GBP(yPaid);
+  yr.textContent=GBP(ySpend-yPaid);
+  ap.textContent=GBP(aPaid);
+  ar.textContent=GBP(aSpend-aPaid);
 
-  // PIE
-  new Chart(document.getElementById("pie"),{
+  new Chart(pie,{
     type:"doughnut",
-    data:{
-      labels:["Yousef","Aleeya"],
-      datasets:[{
-        data:[ySpend,aSpend],
-        backgroundColor:["#2f7dff","#ff4fb0"],
-        borderWidth:0,
-        spacing:6,
-        borderRadius:10,
-        cutout:"70%"
-      }]
-    },
+    data:{datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],spacing:6,borderRadius:10,cutout:"70%"}]},
     options:{plugins:{legend:{display:false}}}
   });
 
-  // BAR
-  const labels = Object.keys(monthly).sort();
-  new Chart(document.getElementById("bar"),{
+  const labels=Object.keys(monthly).sort();
+  new Chart(bar,{
     type:"bar",
     data:{
       labels,
@@ -284,17 +245,14 @@ async function loadCSV(path){
     }
   });
 
-  // TABLE
   aRows.sort((a,b)=>a.d-b.d);
-  document.getElementById("aLedger").innerHTML =
-    aRows.map(r=>`
-      <tr>
-        <td>${r.d.toLocaleDateString("en-GB")}</td>
-        <td>${r.type}</td>
-        <td>${r.desc}</td>
-        <td>${GBP(r.amt)}</td>
-      </tr>
-    `).join("");
+  aLedger.innerHTML=aRows.map(r=>`
+    <tr>
+      <td>${r.d.toLocaleDateString("en-GB")}</td>
+      <td>${r.type}</td>
+      <td>${r.desc}</td>
+      <td>${GBP(r.amt)}</td>
+    </tr>`).join("");
 })();
 </script>
 
