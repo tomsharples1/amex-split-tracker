@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Amex Split Tracker</title>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -16,234 +16,154 @@
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.6);
   --blue:#2f7dff;
-  --blueDark:#1f56b8;
   --pink:#ff4fb0;
-  --pinkDark:#c93686;
 }
-*{box-sizing:border-box}
 body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto;
   background:var(--bg);
   color:var(--text);
 }
-.wrap{
-  max-width:420px;
-  margin:0 auto;
-  padding:16px;
-}
+.wrap{max-width:420px;margin:0 auto;padding:12px}
 .card{
   background:var(--card);
   border:1px solid var(--border);
   border-radius:18px;
-  padding:16px;
-  margin-bottom:14px;
+  padding:14px;
+  margin-bottom:12px;
 }
-h1{
-  font-size:18px;
-  margin:0 0 12px 0;
-}
-.row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.name{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-weight:600;
-}
-.dot{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-}
-.blue{background:var(--blue)}
-.pink{background:var(--pink)}
-.big{
-  font-size:26px;
-  font-weight:800;
-}
-.sub{
-  font-size:12px;
-  color:var(--muted);
-}
-.kpiRow{
-  display:flex;
-  justify-content:space-between;
-  margin-top:8px;
-}
-canvas{
-  max-width:100%;
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:12px;
-}
-th,td{
-  padding:8px 6px;
-  border-bottom:1px solid rgba(255,255,255,.08);
-}
-th{
-  text-align:left;
-  color:var(--muted);
-}
-.badge{
-  padding:2px 8px;
-  border-radius:999px;
-  font-size:11px;
-  background:rgba(255,255,255,.08);
-}
+h1{font-size:18px;margin:0 0 10px 0;text-align:center}
+.dot{width:10px;height:10px;border-radius:50%}
+.row{display:flex;justify-content:space-between;align-items:center}
+.center{text-align:center}
+.big{font-size:26px;font-weight:800}
+.mid{font-size:18px;font-weight:700}
+.sub{font-size:12px;color:var(--muted)}
+table{width:100%;font-size:12px;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
+th{text-align:left;color:var(--muted)}
+canvas{max-height:220px}
 </style>
 </head>
 
 <body>
 <div class="wrap">
-  <h1>Amex Split Tracker</h1>
+<h1>Amex Split Tracker</h1>
 
-  <!-- PIE CARD -->
-  <div class="card">
-    <canvas id="pie" height="220"></canvas>
+<!-- PIE CARD -->
+<div class="card center">
+  <canvas id="pie"></canvas>
 
-    <div style="margin-top:12px">
-      <div class="row">
-        <div class="name"><span class="dot blue"></span>Yousef</div>
-        <div class="name"><span class="dot pink"></span>Aleeya</div>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <div class="sub">Total Amex spend</div>
-        <div class="big" id="totalSpend">£0</div>
-      </div>
+  <div style="margin-top:10px">
+    <div class="row">
+      <div class="row"><span class="dot" style="background:var(--blue)"></span>&nbsp;Yousef</div>
+      <div id="ys" class="mid">£0</div>
     </div>
-  </div>
-
-  <!-- YOUSEF KPI -->
-  <div class="card">
-    <div class="name"><span class="dot blue"></span>Yousef</div>
-    <div class="kpiRow">
-      <div>
-        <div class="sub">Paid</div>
-        <div class="big" id="yPaid">£0</div>
-      </div>
-      <div>
-        <div class="sub">Remaining</div>
-        <div class="big" id="yRemain">£0</div>
-      </div>
+    <div class="row">
+      <div class="row"><span class="dot" style="background:var(--pink)"></span>&nbsp;Aleeya</div>
+      <div id="as" class="mid">£0</div>
     </div>
-  </div>
-
-  <!-- ALEEYA KPI -->
-  <div class="card">
-    <div class="name"><span class="dot pink"></span>Aleeya</div>
-    <div class="kpiRow">
-      <div>
-        <div class="sub">Paid</div>
-        <div class="big" id="aPaid">£0</div>
-      </div>
-      <div>
-        <div class="sub">Remaining</div>
-        <div class="big" id="aRemain">£0</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TABLE -->
-  <div class="card">
-    <h3 style="margin:0 0 10px 0">Aleeya – spending & repayments</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody id="ledger"></tbody>
-    </table>
   </div>
 </div>
 
+<!-- KPI CARDS -->
+<div class="card">
+  <div class="sub">Yousef</div>
+  <div class="row"><div>Paid</div><div id="yp" class="mid">£0</div></div>
+  <div class="row"><div>Remaining</div><div id="yr" class="mid">£0</div></div>
+</div>
+
+<div class="card">
+  <div class="sub">Aleeya</div>
+  <div class="row"><div>Paid</div><div id="ap" class="mid">£0</div></div>
+  <div class="row"><div>Remaining</div><div id="ar" class="mid">£0</div></div>
+</div>
+
+<!-- BAR CHART -->
+<div class="card">
+  <canvas id="bar"></canvas>
+</div>
+
+<!-- TABLE -->
+<div class="card">
+  <div class="sub" style="margin-bottom:6px">Aleeya – spending & repayments</div>
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr>
+    </thead>
+    <tbody id="ledger"></tbody>
+  </table>
+</div>
+</div>
+
 <script>
-const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(n);
+const GBP=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(n);
 
-async function loadCSV(path){
-  const res = await fetch(path);
-  const text = await res.text();
-  return Papa.parse(text,{header:true,skipEmptyLines:true}).data;
-}
+const parseCSV=txt=>Papa.parse(txt,{header:true,skipEmptyLines:true}).data;
+const parseDate=s=>{const p=s.split(/[\/-]/);return new Date(p[2],p[1]-1,p[0]);};
+const monthKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 
-function parseDate(s){
-  const [d,m,y] = s.split(/[\/-]/);
-  return new Date(y,m-1,d);
-}
+fetch("data/activity.csv").then(r=>r.text()).then(actTxt=>{
+fetch("data/payments.csv").then(r=>r.text()).then(payTxt=>{
 
-(async function init(){
-  const activity = await loadCSV("data/activity.csv");
-  const payments = await loadCSV("data/aleeya_payments.csv");
+const activity=parseCSV(actTxt);
+const payments=parseCSV(payTxt);
 
-  let ySpend=0, aSpend=0, yPaid=0, aPaid=0;
-  let ledger=[];
+let ySpend=0,aSpend=0,yPaid=0,aPaid=0;
+let monthly={}, ledger=[];
 
-  for(const r of payments){
-    const amt=Math.abs(+r.Amount);
-    aPaid+=amt;
-    ledger.push({date:r.Date,type:"Paid",desc:"Repayment",amt:-amt});
+payments.forEach(r=>{
+  const amt=Math.abs(+r.Amount);
+  const d=parseDate(r.Date);
+  aPaid+=amt;
+  ledger.push({d,type:"Paid",desc:"Repayment",amt:-amt});
+  const m=monthKey(d); monthly[m]??={ys:0,as:0,yp:0,ap:0}; monthly[m].ap+=amt;
+});
+
+activity.forEach(r=>{
+  const amt=+r.Amount; if(!amt) return;
+  const d=parseDate(r.Date);
+  const m=monthKey(d); monthly[m]??={ys:0,as:0,yp:0,ap:0};
+  const isAleeya=/ALEEYA/i.test(r["Card Member"]||"");
+
+  if(amt>0){
+    if(isAleeya){aSpend+=amt;monthly[m].as+=amt;ledger.push({d,type:"Spent",desc:r.Description,amt});}
+    else{ySpend+=amt;monthly[m].ys+=amt;}
+  }else if(!isAleeya && /PAYMENT/i.test(r.Description)){
+    yPaid+=Math.abs(amt);monthly[m].yp+=Math.abs(amt);
   }
+});
 
-  for(const r of activity){
-    const amt=+r.Amount;
-    if(!amt) continue;
-    const isAleeya=/ALEEYA/i.test(r["Card Member"]||"");
+document.getElementById("ys").textContent=GBP(ySpend);
+document.getElementById("as").textContent=GBP(aSpend);
+document.getElementById("yp").textContent=GBP(yPaid);
+document.getElementById("yr").textContent=GBP(Math.max(0,ySpend-yPaid));
+document.getElementById("ap").textContent=GBP(aPaid);
+document.getElementById("ar").textContent=GBP(Math.max(0,aSpend-aPaid));
 
-    if(amt>0){
-      if(isAleeya){
-        aSpend+=amt;
-        ledger.push({date:r.Date,type:"Spent",desc:r.Description,amt});
-      }else{
-        ySpend+=amt;
-      }
-    }else if(/PAYMENT/i.test(r.Description||"") && !isAleeya){
-      yPaid+=Math.abs(amt);
-    }
-  }
+new Chart(pie,{
+  type:"doughnut",
+  data:{datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],borderWidth:0,cutout:"70%"}]},
+  options:{plugins:{legend:{display:false}}}
+});
 
-  const totalSpend = ySpend + aSpend;
+const labels=Object.keys(monthly).sort();
+new Chart(bar,{
+  type:"bar",
+  data:{labels,datasets:[
+    {label:"Yousef spend",data:labels.map(m=>monthly[m].ys),backgroundColor:"#2f7dff"},
+    {label:"Yousef paid",data:labels.map(m=>monthly[m].yp),backgroundColor:"#1f56b8"},
+    {label:"Aleeya spend",data:labels.map(m=>monthly[m].as),backgroundColor:"#ff4fb0"},
+    {label:"Aleeya paid",data:labels.map(m=>monthly[m].ap),backgroundColor:"#c93686"},
+  ]}
+});
 
-  document.getElementById("totalSpend").textContent = GBP(totalSpend);
-  document.getElementById("yPaid").textContent = GBP(yPaid);
-  document.getElementById("yRemain").textContent = GBP(Math.max(0,ySpend-yPaid));
-  document.getElementById("aPaid").textContent = GBP(aPaid);
-  document.getElementById("aRemain").textContent = GBP(Math.max(0,aSpend-aPaid));
+ledger.sort((a,b)=>a.d-b.d);
+document.getElementById("ledger").innerHTML=
+ledger.map(l=>`<tr><td>${l.d.toLocaleDateString("en-GB")}</td><td>${l.type}</td><td>${l.desc}</td><td>${GBP(l.amt)}</td></tr>`).join("");
 
-  new Chart(document.getElementById("pie"),{
-    type:"doughnut",
-    data:{
-      datasets:[{
-        data:[ySpend,aSpend],
-        backgroundColor:["#2f7dff","#ff4fb0"],
-        borderWidth:0,
-        spacing:4,
-        borderRadius:10,
-        cutout:"70%"
-      }]
-    },
-    options:{plugins:{legend:{display:false}}}
-  });
-
-  ledger.sort((a,b)=>parseDate(a.date)-parseDate(b.date));
-  document.getElementById("ledger").innerHTML =
-    ledger.map(l=>`
-      <tr>
-        <td>${l.date}</td>
-        <td><span class="badge">${l.type}</span></td>
-        <td>${l.desc}</td>
-        <td>${GBP(l.amt)}</td>
-      </tr>`).join("");
-})();
+});
+});
 </script>
 </body>
 </html>
