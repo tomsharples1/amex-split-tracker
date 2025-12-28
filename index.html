@@ -35,14 +35,6 @@ h1{margin:0;font-size:20px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
 .grid{display:grid;grid-template-columns:1fr;gap:14px}
 @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
-.uploadBar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px}
-.uploadBar .block{display:flex;flex-direction:column;gap:6px;min-width:260px;flex:1}
-label{font-size:12px;color:var(--muted)}
-input{width:100%;color:white}
-button{padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:#222;color:white;cursor:pointer}
-.spinner{width:14px;height:14px;border:2px solid #555;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none;margin-left:8px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.status{font-size:12px;color:var(--muted)}
 .pieWrap{height:260px;display:flex;align-items:center;justify-content:center}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .kpi{background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:14px}
@@ -66,15 +58,6 @@ th{text-align:left;color:var(--muted)}
     <div class="key"><span class="dot pink"></span>Aleeya</div>
   </div>
 </header>
-
-<div class="card uploadBar">
-  <div class="block"><label>Amex activity CSV</label><input type="file" id="activity" accept=".csv"></div>
-  <div class="block"><label>Aleeya payments CSV</label><input type="file" id="payments" accept=".csv"></div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <button id="analyze">Analyze<span id="spin" class="spinner"></span></button>
-    <span class="status" id="status"></span>
-  </div>
-</div>
 
 <div class="grid">
   <div class="card"><div class="pieWrap"><canvas id="pie"></canvas></div></div>
@@ -102,190 +85,122 @@ const $=id=>document.getElementById(id);
 const GBP=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(n);
 let pieChart=null, barChart=null;
 
-const parseCSV=f=>new Promise((res,rej)=>Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>res(r.data),error:rej}));
+const loadCSV = url =>
+  fetch(url).then(r=>{
+    if(!r.ok) throw new Error(`Failed to load ${url}`);
+    return r.text();
+  }).then(t=>Papa.parse(t,{header:true,skipEmptyLines:true}).data);
+
 const parseDate=s=>{
-  if(!s) return null;
-  const p=String(s).trim().split(/[\/-]/);
+  const p=String(s||"").split(/[\/-]/);
   if(p.length!==3) return null;
-  const d=new Date(Number(p[2]),Number(p[1])-1,Number(p[0]));
-  return isNaN(d.getTime())?null:d;
+  const d=new Date(p[2],p[1]-1,p[0]);
+  return isNaN(d)?null:d;
 };
-const monthKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const monthKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 
 function tokens(desc){
-  // Keep merchant identity (AMAZON/AMZN), remove only generic noise
-  const noise = new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
-  return String(desc||"")
-    .toUpperCase()
+  const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
+  return String(desc||"").toUpperCase()
     .replace(/[^A-Z0-9 ]/g," ")
-    .replace(/\s+/g," ")
-    .trim()
-    .split(" ")
-    .filter(t=>t.length>=3 && !noise.has(t));
+    .split(/\s+/).filter(t=>t.length>=3 && !noise.has(t));
 }
-function similarityFromTokenSets(A,B){
+function similarity(A,B){
   if(!A.size||!B.size) return 0;
-  let inter=0;
-  for(const t of A) if(B.has(t)) inter++;
-  return inter/Math.min(A.size,B.size);
-}
-const yieldToUI = ()=>new Promise(r=>setTimeout(r,0));
-
-async function stripRefundPairsBucketed(rows, setStatusCb){
-  const buckets = new Map();
-  const meta = new Array(rows.length);
-
-  for(let i=0;i<rows.length;i++){
-    const amt = Number(rows[i].Amount);
-    if(!amt || isNaN(amt)) { meta[i]=null; continue; }
-    const key = Math.round(Math.abs(amt)*100);
-    const tset = new Set(tokens(rows[i].Description));
-    meta[i] = {amt, key, tset};
-    if(!buckets.has(key)) buckets.set(key,{pos:[],neg:[]});
-    (amt>0 ? buckets.get(key).pos : buckets.get(key).neg).push(i);
-  }
-
-  const used = new Set();
-  let removedPairs = 0;
-  const keys = Array.from(buckets.keys());
-
-  for(let bi=0; bi<keys.length; bi++){
-    const bucket = buckets.get(keys[bi]);
-    const pos = bucket.pos.filter(i=>!used.has(i));
-    const neg = bucket.neg.filter(i=>!used.has(i));
-
-    if(pos.length && neg.length){
-      for(const ni of neg){
-        if(used.has(ni)) continue;
-        const nMeta = meta[ni];
-        let bestIdx=-1, bestScore=0;
-        for(const pi of pos){
-          if(used.has(pi)) continue;
-          const pMeta = meta[pi];
-          const score = similarityFromTokenSets(pMeta.tset, nMeta.tset);
-          if(score > bestScore){ bestScore=score; bestIdx=pi; }
-        }
-        if(bestIdx!==-1 && bestScore>=0.55){
-          used.add(ni); used.add(bestIdx); removedPairs++;
-        }
-      }
-    }
-
-    if(bi % 40 === 0){
-      setStatusCb?.(`Removing refund pairs… (${bi}/${keys.length})`);
-      await yieldToUI();
-    }
-  }
-
-  const cleaned = [];
-  for(let i=0;i<rows.length;i++){
-    if(!used.has(i)) cleaned.push(rows[i]);
-  }
-  return {cleaned, removedPairs};
+  let i=0; for(const t of A) if(B.has(t)) i++;
+  return i/Math.min(A.size,B.size);
 }
 
-$("analyze").onclick = async () => {
-  $("spin").style.display="inline-block";
-  const setStatus = t => $("status").textContent=t;
-  try{
-    const aFile=$("activity").files[0];
-    const pFile=$("payments").files[0];
-    if(!aFile||!pFile) throw new Error("Please upload both CSV files.");
-
-    setStatus("Reading CSVs…");
-    let activity = await parseCSV(aFile);
-    const payments = await parseCSV(pFile);
-
-    setStatus("Removing refund pairs…");
-    const {cleaned, removedPairs} = await stripRefundPairsBucketed(activity, setStatus);
-    activity = cleaned;
-    setStatus(`Refund pairs removed: ${removedPairs}. Calculating…`);
-
-    let ySpend=0,aSpend=0,yPaidGross=0,aPaid=0;
-    let aEvents=[], monthly={};
-
-    for(const r of payments){
-      const amt=Math.abs(Number(r.Amount));
-      const d=parseDate(r.Date);
-      if(!d||isNaN(amt)) continue;
-      aPaid+=amt;
-      const m=monthKey(d); monthly[m]??={ys:0,as:0,ypg:0,ap:0};
-      monthly[m].ap+=amt;
-      aEvents.push({d,type:"Paid",desc:"Repayment",amtSigned:-amt});
-    }
-
-    for(const r of activity){
-      const amt=Number(r.Amount);
-      const d=parseDate(r.Date);
-      if(!d||isNaN(amt)) continue;
-      const isAleeya=/ALEEYA/i.test(String(r["Card Member"]||""));
-      const desc=String(r.Description||"");
-      const m=monthKey(d); monthly[m]??={ys:0,as:0,ypg:0,ap:0};
-
-      if(amt>0){
-        if(isAleeya){ aSpend+=amt; monthly[m].as+=amt; aEvents.push({d,type:"Spent",desc,amtSigned:+amt}); }
-        else{ ySpend+=amt; monthly[m].ys+=amt; }
-      }else if(!isAleeya && /PAYMENT/i.test(desc)){
-        const p=Math.abs(amt); yPaidGross+=p; monthly[m].ypg+=p;
+async function stripRefundPairs(rows){
+  const buckets=new Map(), meta=[];
+  rows.forEach((r,i)=>{
+    const amt=Number(r.Amount);
+    if(!amt) return;
+    const k=Math.round(Math.abs(amt)*100);
+    const t=new Set(tokens(r.Description));
+    meta[i]={amt,k,t};
+    if(!buckets.has(k)) buckets.set(k,{p:[],n:[]});
+    (amt>0?buckets.get(k).p:buckets.get(k).n).push(i);
+  });
+  const used=new Set();
+  for(const b of buckets.values()){
+    for(const ni of b.n){
+      if(used.has(ni)) continue;
+      let best=null,score=0;
+      for(const pi of b.p){
+        if(used.has(pi)) continue;
+        const s=similarity(meta[ni].t,meta[pi].t);
+        if(s>score){score=s;best=pi;}
       }
+      if(best!==null && score>=0.55){used.add(ni);used.add(best);}
     }
-
-    const labels=Object.keys(monthly).sort();
-    const series=labels.map(m=>{
-      const o=monthly[m];
-      return {ys:o.ys, as:o.as, ap:o.ap, yp:Math.max(0,o.ypg-o.ap)};
-    });
-
-    const yPaidNet=Math.max(0,yPaidGross-aPaid);
-
-    $("ys").textContent=GBP(ySpend);
-    $("yp").textContent=GBP(yPaidNet);
-    $("yr").textContent=GBP(Math.max(0,ySpend-yPaidNet));
-    $("as").textContent=GBP(aSpend);
-    $("ap").textContent=GBP(aPaid);
-    $("ar").textContent=GBP(Math.max(0,aSpend-aPaid));
-
-    pieChart?.destroy();
-    pieChart=new Chart($("pie"),{
-      type:"doughnut",
-      data:{labels:["Yousef","Aleeya"],datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],borderWidth:0,spacing:4,borderRadius:10,cutout:"70%"}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-    });
-
-    barChart?.destroy();
-    barChart=new Chart($("bar"),{
-      type:"bar",
-      data:{labels,datasets:[
-        {label:"Yousef spend",data:series.map(x=>x.ys),backgroundColor:"#2f7dff",borderRadius:8},
-        {label:"Yousef paid",data:series.map(x=>x.yp),backgroundColor:"#1f56b8",borderRadius:8},
-        {label:"Aleeya spend",data:series.map(x=>x.as),backgroundColor:"#ff4fb0",borderRadius:8},
-        {label:"Aleeya paid",data:series.map(x=>x.ap),backgroundColor:"#c93686",borderRadius:8}
-      ]},
-      options:{plugins:{legend:{display:true,labels:{color:"rgba(255,255,255,.75)"}}}}
-    });
-
-    aEvents.sort((a,b)=>a.d-b.d);
-    let bal=0;
-    $("aLedger").innerHTML=aEvents.map(ev=>{
-      bal+=ev.amtSigned;
-      return `<tr>
-        <td>${ev.d.toLocaleDateString("en-GB")}</td>
-        <td><span class="badge">${ev.type}</span></td>
-        <td>${String(ev.desc).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}</td>
-        <td>${GBP(ev.amtSigned)}</td>
-        <td>${GBP(bal)}</td>
-      </tr>`;
-    }).join("");
-
-    setStatus("Done");
-  }catch(e){
-    console.error(e);
-    $("status").textContent="Error";
-    alert(e.message||"Something went wrong.");
-  }finally{
-    $("spin").style.display="none";
   }
-};
+  return rows.filter((_,i)=>!used.has(i));
+}
+
+(async ()=>{
+  const activity=await loadCSV("data/activity.csv");
+  const payments=await loadCSV("data/payments.csv");
+
+  const clean=await stripRefundPairs(activity);
+
+  let yS=0,aS=0,yPG=0,aP=0,monthly={},aEvents=[];
+
+  payments.forEach(r=>{
+    const amt=Math.abs(Number(r.Amount)); if(!amt) return;
+    const d=parseDate(r.Date); if(!d) return;
+    aP+=amt; const m=monthKey(d);
+    monthly[m]??={ys:0,as:0,yp:0,ap:0}; monthly[m].ap+=amt;
+    aEvents.push({d,t:"Paid",a:-amt,desc:"Repayment"});
+  });
+
+  clean.forEach(r=>{
+    const amt=Number(r.Amount); if(!amt) return;
+    const d=parseDate(r.Date); if(!d) return;
+    const m=monthKey(d);
+    monthly[m]??={ys:0,as:0,yp:0,ap:0};
+    const isA=/ALEEYA/i.test(r["Card Member"]||"");
+    if(amt>0){
+      if(isA){aS+=amt;monthly[m].as+=amt;aEvents.push({d,t:"Spent",a:amt,desc:r.Description});}
+      else{yS+=amt;monthly[m].ys+=amt;}
+    }else if(!isA && /PAYMENT/i.test(r.Description)){
+      yPG+=Math.abs(amt); monthly[m].yp+=Math.abs(amt);
+    }
+  });
+
+  const yP=Math.max(0,yPG-aP);
+
+  $("ys").textContent=GBP(yS);
+  $("yp").textContent=GBP(yP);
+  $("yr").textContent=GBP(Math.max(0,yS-yP));
+  $("as").textContent=GBP(aS);
+  $("ap").textContent=GBP(aP);
+  $("ar").textContent=GBP(Math.max(0,aS-aP));
+
+  pieChart=new Chart($("pie"),{
+    type:"doughnut",
+    data:{datasets:[{data:[yS,aS],backgroundColor:["#2f7dff","#ff4fb0"],borderWidth:0,spacing:4,borderRadius:10,cutout:"70%"}]},
+    options:{plugins:{legend:{display:false}}}
+  });
+
+  const labels=Object.keys(monthly).sort();
+  barChart=new Chart($("bar"),{
+    type:"bar",
+    data:{labels,datasets:[
+      {label:"Yousef spend",data:labels.map(m=>monthly[m].ys),backgroundColor:"#2f7dff",borderRadius:8},
+      {label:"Yousef paid",data:labels.map(m=>Math.max(0,monthly[m].yp-monthly[m].ap)),backgroundColor:"#1f56b8",borderRadius:8},
+      {label:"Aleeya spend",data:labels.map(m=>monthly[m].as),backgroundColor:"#ff4fb0",borderRadius:8},
+      {label:"Aleeya paid",data:labels.map(m=>monthly[m].ap),backgroundColor:"#c93686",borderRadius:8}
+    ]}
+  });
+
+  aEvents.sort((a,b)=>a.d-b.d);
+  let bal=0;
+  $("aLedger").innerHTML=aEvents.map(e=>{
+    bal+=e.a;
+    return `<tr><td>${e.d.toLocaleDateString("en-GB")}</td><td><span class="badge">${e.t}</span></td><td>${e.desc}</td><td>${GBP(e.a)}</td><td>${GBP(bal)}</td></tr>`;
+  }).join("");
+})();
 </script>
 </body>
 </html>
