@@ -21,12 +21,7 @@
   --pinkDark:#c93686;
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto;
-  background:var(--bg);
-  color:var(--text);
-}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--text)}
 .wrap{max-width:480px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
 h2,h3{margin:0 0 10px 0;font-weight:800}
@@ -37,11 +32,17 @@ h2,h3{margin:0 0 10px 0;font-weight:800}
 .mid{font-size:18px;font-weight:900}
 .sub{font-size:12px;color:var(--muted)}
 canvas{max-width:100%}
+
+/* Pie */
 .pieWrap{position:relative}
 .pieCenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+
+/* Monthly */
 .slider{overflow:hidden;border-radius:14px}
 .slideTrack{display:flex;width:200%;transition:transform .26s ease}
 .slide{width:50%}
+
+/* Table */
 .tableHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .segment{display:inline-flex;border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .segBtn{background:none;border:0;color:var(--muted);padding:6px 10px;font-size:12px;cursor:pointer}
@@ -88,9 +89,8 @@ th{color:var(--muted);text-align:left}
 <div class="card" id="monthCard">
   <h2 id="monthLabel">—</h2>
   <div class="slider">
-    <div class="slideTrack" id="track">
+    <div class="slideTrack">
       <div class="slide"><canvas id="barA" height="160"></canvas></div>
-      <div class="slide"><canvas id="barB" height="160"></canvas></div>
     </div>
   </div>
 </div>
@@ -114,21 +114,50 @@ th{color:var(--muted);text-align:left}
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
-const parseDate = s => {
-  const p=String(s||"").split(/[\/-]/);
-  if(p.length!==3) return null;
-  const d=new Date(p[2],p[1]-1,p[0]);
-  return isNaN(d)?null:d;
-};
-const monthKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-const monthPretty = k => new Date(k.split("-")[0],k.split("-")[1]-1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+const $=id=>document.getElementById(id);
+const GBP=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
+const parseDate=s=>{const p=String(s||"").split(/[\/-]/);if(p.length!==3)return null;const d=new Date(p[2],p[1]-1,p[0]);return isNaN(d)?null:d};
+const monthKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const monthPretty=k=>new Date(k.split("-")[0],k.split("-")[1]-1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+
+/* === REFUND PAIRING (CORRECT VERSION) === */
+function tokens(desc){
+  const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
+  return String(desc||"").toUpperCase().replace(/[^A-Z0-9 ]/g," ")
+    .split(" ").filter(t=>t.length>=3&&!noise.has(t));
+}
+function similarity(A,B){
+  let i=0; for(const t of A) if(B.has(t)) i++;
+  return i/Math.min(A.size,B.size);
+}
+function stripRefundPairs(rows){
+  const buckets=new Map(),meta=[];
+  rows.forEach((r,i)=>{
+    const amt=+r.Amount; if(!amt) return;
+    const k=Math.round(Math.abs(amt)*100);
+    meta[i]={amt,t:new Set(tokens(r.Description))};
+    buckets.set(k,buckets.get(k)||{p:[],n:[]});
+    (amt>0?buckets.get(k).p:buckets.get(k).n).push(i);
+  });
+  const used=new Set();
+  for(const {p,n} of buckets.values()){
+    for(const ni of n){
+      let best=null,s=0;
+      for(const pi of p){
+        const sc=similarity(meta[pi].t,meta[ni].t);
+        if(sc>s){s=sc;best=pi;}
+      }
+      if(best!==null&&s>=0.55){used.add(best);used.add(ni);}
+    }
+  }
+  return rows.filter((_,i)=>!used.has(i));
+}
 
 (async()=>{
 try{
-  const activityRaw = Papa.parse(await (await fetch("data/activity.csv")).text(),{header:true}).data;
-  const payments = Papa.parse(await (await fetch("data/payments.csv")).text(),{header:true}).data;
+  const activityRaw=Papa.parse(await (await fetch("data/activity.csv")).text(),{header:true}).data;
+  const payments=Papa.parse(await (await fetch("data/payments.csv")).text(),{header:true}).data;
+  const activity=stripRefundPairs(activityRaw);
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
@@ -141,7 +170,7 @@ try{
     events.push({d,type:"paid",desc:"Repayment",amt:-amt});
   });
 
-  activityRaw.forEach(r=>{
+  activity.forEach(r=>{
     const d=parseDate(r.Date); if(!d) return;
     const amt=+r.Amount||0; if(!amt) return;
     const m=monthKey(d),b=ensure(m);
@@ -154,6 +183,11 @@ try{
     }
   });
 
+  /* Pie guard */
+  if(ySpend + aSpend === 0){
+    throw new Error("Pie data invalid (zero spend after refund pairing)");
+  }
+
   $("ys").textContent=GBP(ySpend);
   $("as").textContent=GBP(aSpend);
   $("yp").textContent=GBP(Math.max(0,yPaidGross-aPaid));
@@ -161,43 +195,39 @@ try{
   $("ap").textContent=GBP(aPaid);
   $("ar").textContent=GBP(aSpend-aPaid);
 
+  new Chart($("pie"),{
+    type:"doughnut",
+    data:{datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],cutout:"68%",offset:[0,0]}]},
+    options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+
   const months=Object.keys(monthly).sort();
   let idx=months.length-1;
   $("monthLabel").textContent=monthPretty(months[idx]);
 
-  const makeBar = el => new Chart(el,{
+  const bar=new Chart($("barA"),{
     type:"bar",
-    data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{data:[0,0,0,0],backgroundColor:["#2f7dff","#1f56b8","#ff4fb0","#c93686"]}]},
+    data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{
+      data:[monthly[months[idx]].ys,Math.max(0,monthly[months[idx]].ypg-monthly[months[idx]].ap),monthly[months[idx]].as,monthly[months[idx]].ap],
+      backgroundColor:["#2f7dff","#1f56b8","#ff4fb0","#c93686"],
+      borderRadius:8
+    }]},
     options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
   });
 
-  const barChartA = makeBar($("barA"));
-  const barChartB = makeBar($("barB"));
-
-  function renderMonth(i){
-    const m=monthly[months[i]];
-    barChartA.data.datasets[0].data=[m.ys,Math.max(0,m.ypg-m.ap),m.as,m.ap];
-    barChartA.update();
-    $("monthLabel").textContent=monthPretty(months[i]);
-  }
-  renderMonth(idx);
-
-  $("monthCard").ontouchstart = e => startX = e.touches[0].clientX;
+  $("monthCard").ontouchstart=e=>startX=e.touches[0].clientX;
   let startX;
-  $("monthCard").ontouchend = e => {
+  $("monthCard").ontouchend=e=>{
     const dx=e.changedTouches[0].clientX-startX;
-    if(dx < -40 && idx>0){idx--; renderMonth(idx);}
-    if(dx > 40 && idx<months.length-1){idx++; renderMonth(idx);}
+    if(dx<-40&&idx>0)idx--;
+    if(dx>40&&idx<months.length-1)idx++;
+    $("monthLabel").textContent=monthPretty(months[idx]);
+    const m=monthly[months[idx]];
+    bar.data.datasets[0].data=[m.ys,Math.max(0,m.ypg-m.ap),m.as,m.ap];
+    bar.update();
   };
 
-  $("aLedger").innerHTML = events.map(e=>`
-    <tr>
-      <td>${e.d.toLocaleDateString("en-GB")}</td>
-      <td>${e.type}</td>
-      <td>${e.desc}</td>
-      <td>${GBP(Math.abs(e.amt))}</td>
-    </tr>
-  `).join("");
+  $("aLedger").innerHTML=events.map(e=>`<tr><td>${e.d.toLocaleDateString("en-GB")}</td><td>${e.type}</td><td>${e.desc}</td><td>${GBP(Math.abs(e.amt))}</td></tr>`).join("");
 
 }catch(e){
   $("errCard").style.display="block";
