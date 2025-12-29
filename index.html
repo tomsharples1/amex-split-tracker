@@ -161,6 +161,9 @@ tr.repaid {
 
 <script>
 const $ = id => document.getElementById(id);
+const cssVar = name =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
 const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
 const parseDate = s => {
   const p=String(s||"").split(/[\/-]/);
@@ -271,7 +274,7 @@ function stripRefundPairs(rows){
       labels:["Yousef","Aleeya"],
       datasets:[{
         data:[ySpend,aSpend],
-        backgroundColor:["#2f7dff","#ff4fb0"],
+        backgroundColor:[cssVar("--blue"), cssVar("--pink")],
         borderWidth:0,          // no white border
         cutout:"68%",
         spacing:6,             // gap between slices
@@ -332,7 +335,12 @@ function stripRefundPairs(rows){
     type:"bar",
     data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{
       data:[],
-      backgroundColor:["#2f7dff","#1f56b8","#ff4fb0","#c93686"],
+      backgroundColor:[
+        cssVar("--blue"),
+        cssVar("--blueDark"),
+        cssVar("--pink"),
+        cssVar("--pinkDark")
+      ],
       borderRadius:8
     }]},
     options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
