@@ -349,7 +349,11 @@ function stripRefundPairs(rows){
       .filter(e=>filter==="all"||e.type===filter)
       .sort((a,b)=>b.d-a.d)   // newest first
       /* .map(e=>`<tr> */ 
-      .map(e=>`<tr class="${e.type==="spent" && e.paidOff ? "paidOff" : e.type==="paid" && e.repaid ? "repaid" : ""}">
+      .map(e=>`<tr class="${
+          e.type==="spent" && e.paidOff ? "paidOff" :
+          e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
+          ""
+        }">
         <td>${e.d.toLocaleDateString("en-GB")}</td>
         <td><span class="badge">${e.type}</span></td>
         <td>${e.desc}</td>
