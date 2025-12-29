@@ -21,12 +21,7 @@
   --pinkDark:#c93686;
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto;
-  background:var(--bg);
-  color:var(--text);
-}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--text)}
 .wrap{max-width:480px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
 h2,h3{margin:0 0 10px 0;font-weight:800}
@@ -48,7 +43,7 @@ canvas{max-width:100%}
   pointer-events:none;
 }
 
-/* Monthly swipe */
+/* Monthly */
 .slider{overflow:hidden;border-radius:14px}
 .slideTrack{display:flex;width:200%;transition:transform .25s ease}
 .slide{width:50%}
@@ -93,7 +88,7 @@ th{color:var(--muted);text-align:left}
 <div class="card" id="monthCard">
   <h2 id="monthLabel">—</h2>
   <div class="slider">
-    <div class="slideTrack" id="track">
+    <div class="slideTrack">
       <div class="slide"><canvas id="bar" height="160"></canvas></div>
       <div class="slide"></div>
     </div>
@@ -133,7 +128,7 @@ const monthKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")
 const monthPretty = k => new Date(k.split("-")[0],k.split("-")[1]-1)
   .toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 
-/* --- Refund pairing (stable version) --- */
+/* ---------- Refund pairing (stable) ---------- */
 function tokens(desc){
   const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
   return String(desc||"").toUpperCase()
@@ -167,7 +162,6 @@ function stripRefundPairs(rows){
   return rows.filter((_,i)=>!used.has(i));
 }
 
-/* --- Main --- */
 (async()=>{
   const activityRaw = Papa.parse(await (await fetch("data/activity.csv")).text(),{header:true}).data;
   const payments = Papa.parse(await (await fetch("data/payments.csv")).text(),{header:true}).data;
@@ -204,24 +198,52 @@ function stripRefundPairs(rows){
   $("ap").textContent=GBP(aPaid);
   $("ar").textContent=GBP(aSpend-aPaid);
 
+  /* ---------- PIE (interactive) ---------- */
+  const pie = new Chart($("pie"),{
+    type:"doughnut",
+    data:{
+      labels:["Yousef","Aleeya"],
+      datasets:[{
+        data:[ySpend,aSpend],
+        backgroundColor:["#2f7dff","#ff4fb0"],
+        borderWidth:0,
+        cutout:"68%",
+        offset:[0,0]
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      onClick:(_,els)=>{
+        const ds=pie.data.datasets[0];
+        if(!els.length){
+          ds.offset=[0,0];
+          $("pcTitle").textContent="Total";
+          $("pcTotal").textContent=GBP(ySpend+aSpend);
+          $("pcTx").textContent=`${yTx+aTx} transactions`;
+          pie.update(); return;
+        }
+        const i=els[0].index;
+        ds.offset=[0,0]; ds.offset[i]=30;
+        if(i===0){
+          $("pcTitle").textContent="Yousef";
+          $("pcTotal").textContent=GBP(ySpend);
+          $("pcTx").textContent=`${yTx} transactions`;
+        }else{
+          $("pcTitle").textContent="Aleeya";
+          $("pcTotal").textContent=GBP(aSpend);
+          $("pcTx").textContent=`${aTx} transactions`;
+        }
+        pie.update();
+      }
+    }
+  });
+  $("pcTotal").textContent=GBP(ySpend+aSpend);
+  $("pcTx").textContent=`${yTx+aTx} transactions`;
+
+  /* ---------- BAR ---------- */
   const months=Object.keys(monthly).sort();
   let idx=months.length-1;
-  $("monthLabel").textContent=monthPretty(months[idx]);
-
-  /* Pie (NO WHITE BORDER) */
-  new Chart($("pie"),{
-    type:"doughnut",
-    data:{datasets:[{
-      data:[ySpend,aSpend],
-      backgroundColor:["#2f7dff","#ff4fb0"],
-      borderWidth:0,
-      cutout:"68%"
-    }]},
-    options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
-  });
-
-  /* Bar */
-  const bar = new Chart($("bar"),{
+  const bar=new Chart($("bar"),{
     type:"bar",
     data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{
       data:[],
@@ -239,21 +261,26 @@ function stripRefundPairs(rows){
   }
   renderMonth();
 
-  /* Swipe */
+  /* Swipe: RIGHT = previous, LEFT = next */
   let startX=0;
   $("monthCard").ontouchstart=e=>startX=e.touches[0].clientX;
   $("monthCard").ontouchend=e=>{
     const dx=e.changedTouches[0].clientX-startX;
-    if(dx<-40 && idx>0) idx--;
-    if(dx>40 && idx<months.length-1) idx++;
+    if(dx>40 && idx>0) idx--;          // swipe right → previous
+    if(dx<-40 && idx<months.length-1) idx++; // swipe left → next
     renderMonth();
   };
 
-  /* Table + filters */
+  /* ---------- TABLE ---------- */
   let filter="all";
+  function setActive(btn){
+    ["fltAll","fltSpent","fltPaid"].forEach(id=>$(id).classList.remove("active"));
+    btn.classList.add("active");
+  }
   function renderTable(){
     $("aLedger").innerHTML = events
       .filter(e=>filter==="all"||e.type===filter)
+      .sort((a,b)=>b.d-a.d)   // newest first
       .map(e=>`<tr>
         <td>${e.d.toLocaleDateString("en-GB")}</td>
         <td><span class="badge">${e.type}</span></td>
@@ -261,9 +288,9 @@ function stripRefundPairs(rows){
         <td>${GBP(Math.abs(e.amt))}</td>
       </tr>`).join("");
   }
-  $("fltAll").onclick=()=>{filter="all";renderTable()};
-  $("fltSpent").onclick=()=>{filter="spent";renderTable()};
-  $("fltPaid").onclick=()=>{filter="paid";renderTable()};
+  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);renderTable()};
+  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);renderTable()};
+  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);renderTable()};
   renderTable();
 
 })();
