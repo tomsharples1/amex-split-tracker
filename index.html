@@ -9,7 +9,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <style>
-/* === UNCHANGED STYLES (verbatim from your version) === */
 :root{
   --bg:#0b0f19;
   --card:rgba(255,255,255,.06);
@@ -22,7 +21,12 @@
   --pinkDark:#c93686;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--text)}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:var(--bg);
+  color:var(--text);
+}
 .wrap{max-width:480px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
 h2,h3{margin:0 0 10px 0;font-weight:800}
@@ -33,48 +37,195 @@ h2,h3{margin:0 0 10px 0;font-weight:800}
 .mid{font-size:18px;font-weight:900}
 .sub{font-size:12px;color:var(--muted)}
 canvas{max-width:100%}
+
+/* Error card */
+.err{display:none;border:1px solid rgba(255,79,176,.45);background:rgba(255,79,176,.1)}
+.err pre{white-space:pre-wrap;font-size:12px}
+
+/* Pie */
 .pieWrap{position:relative}
 .pieCenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-.pieCenter .title{font-size:13px;font-weight:900}
-.pieCenter .val{font-size:18px;font-weight:1000;margin-top:4px}
-.pieCenter .sub{font-size:12px;color:var(--muted)}
-.slider{position:relative;overflow:hidden;border-radius:14px}
-.slideTrack{display:flex;width:200%;transition:transform 260ms ease}
+
+/* Monthly swipe */
+.slider{overflow:hidden;border-radius:14px}
+.slideTrack{display:flex;width:200%;transition:transform .26s ease}
 .slide{width:50%}
-.tableHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+
+/* Table */
+.tableHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .segment{display:inline-flex;border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .segBtn{background:none;border:0;color:var(--muted);padding:6px 10px;font-size:12px;cursor:pointer}
 .segBtn.active{background:rgba(255,255,255,.08);color:var(--text)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
 th{color:var(--muted);text-align:left}
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
+.badge{padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12)}
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
-<!-- PIE, KPIs, MONTH CARD, TABLE -->
-<!-- === HTML BODY UNCHANGED FROM YOUR VERSION === -->
+<div class="card err" id="errCard">
+  <h3>Error</h3>
+  <pre id="errText"></pre>
+</div>
+
+<!-- PIE -->
+<div class="card">
+  <h2>All-time spending</h2>
+  <div class="pieWrap">
+    <canvas id="pie" height="220"></canvas>
+    <div class="pieCenter">
+      <div id="pcTitle">Total</div>
+      <div id="pcTotal">£0</div>
+      <div class="sub" id="pcTx">0 transactions</div>
+    </div>
+  </div>
+  <div class="row"><div><span class="dot" style="background:var(--blue)"></span>Yousef</div><div id="ys">£0</div></div>
+  <div class="row"><div><span class="dot" style="background:var(--pink)"></span>Aleeya</div><div id="as">£0</div></div>
+</div>
+
+<!-- KPIs -->
+<div class="kpiGrid">
+  <div class="card kpi"><h3>Yousef</h3><div class="sub">Paid</div><div class="mid" id="yp">£0</div><div class="sub">Remaining</div><div class="mid" id="yr">£0</div></div>
+  <div class="card kpi"><h3>Aleeya</h3><div class="sub">Paid</div><div class="mid" id="ap">£0</div><div class="sub">Remaining</div><div class="mid" id="ar">£0</div></div>
+</div>
+
+<!-- MONTH -->
+<div class="card" id="monthCard">
+  <h2 id="monthLabel">—</h2>
+  <div class="slider">
+    <div class="slideTrack" id="track">
+      <div class="slide"><canvas id="barA" height="160"></canvas></div>
+      <div class="slide"><canvas id="barB" height="160"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="card">
+  <div class="tableHeader">
+    <h2>Aleeya Transactions</h2>
+    <div class="segment">
+      <button class="segBtn active" id="fltAll">All</button>
+      <button class="segBtn" id="fltSpent">Spent</button>
+      <button class="segBtn" id="fltPaid">Paid</button>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead>
+    <tbody id="aLedger"></tbody>
+  </table>
+</div>
+
+</div>
 
 <script>
-/* === ONLY CHANGES BELOW THIS POINT === */
-
-/* Bar chart labels updated */
-function updateBarChart(chart, k){
-  const m = monthly[k];
-  const yPaidNet = clamp0(m.ypg - m.ap);
-  chart.data.labels = ["Spent","Paid","Spent","Paid"];
-  chart.data.datasets[0].data = [m.ys, yPaidNet, m.as, m.ap];
-  chart.update();
+/* ---------- HARD GUARD ---------- */
+const mustExist = ["pie","barA","barB","monthCard","aLedger"];
+for(const id of mustExist){
+  if(!document.getElementById(id)){
+    document.getElementById("errCard").style.display="block";
+    document.getElementById("errText").textContent = "Missing DOM element: #"+id;
+    throw new Error("Missing DOM: "+id);
+  }
 }
 
-/* Swipe direction INVERTED */
-addSwipe($("monthCard"),
-  () => { if(mIdx > 0) renderMonthSlide(mIdx - 1); },   // swipe LEFT → previous month
-  () => { if(mIdx < months.length - 1) renderMonthSlide(mIdx + 1); } // swipe RIGHT → next month
-);
+/* ---------- HELPERS ---------- */
+const $=id=>document.getElementById(id);
+const GBP=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
+const parseDate=s=>{const p=String(s||"").split(/[\/-]/);if(p.length!==3)return null;const d=new Date(p[2],p[1]-1,p[0]);return isNaN(d)?null:d};
+const monthKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const monthPretty=k=>new Date(k.split("-")[0],k.split("-")[1]-1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+
+/* ---------- REFUND STRIP ---------- */
+function stripRefundPairs(rows){
+  const used=new Set();
+  const byAmt={};
+  rows.forEach((r,i)=>{
+    const a=Math.round(Math.abs(+r.Amount||0)*100);
+    if(!byAmt[a])byAmt[a]={p:[],n:[]};
+    (+r.Amount>0?byAmt[a].p:byAmt[a].n).push(i);
+  });
+  for(const k in byAmt){
+    const {p,n}=byAmt[k];
+    p.forEach(pi=>n.forEach(ni=>{if(!used.has(pi)&&!used.has(ni))used.add(pi)&&used.add(ni)}));
+  }
+  return rows.filter((_,i)=>!used.has(i));
+}
+
+/* ---------- MAIN ---------- */
+(async()=>{
+try{
+  const activityRaw=Papa.parse(await (await fetch("data/activity.csv")).text(),{header:true}).data;
+  const payments=Papa.parse(await (await fetch("data/payments.csv")).text(),{header:true}).data;
+  const activity=stripRefundPairs(activityRaw);
+
+  let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
+  const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
+  const events=[];
+
+  payments.forEach(r=>{
+    const d=parseDate(r.Date); if(!d) return;
+    const amt=Math.abs(+r.Amount||0); if(!amt) return;
+    aPaid+=amt; ensure(monthKey(d)).ap+=amt;
+    events.push({d,type:"paid",desc:"Repayment",amt:-amt});
+  });
+
+  activity.forEach(r=>{
+    const d=parseDate(r.Date); if(!d) return;
+    const amt=+r.Amount||0; if(!amt) return;
+    const m=monthKey(d),b=ensure(m);
+    const isA=/ALEEYA/i.test(r["Card Member"]||"");
+    if(amt>0){
+      if(isA){aSpend+=amt;aTx++;b.as+=amt;events.push({d,type:"spent",desc:r.Description,amt})}
+      else{ySpend+=amt;yTx++;b.ys+=amt}
+    }else if(!isA&&/PAYMENT/i.test(r.Description)){yPaidGross+=Math.abs(amt);b.ypg+=Math.abs(amt)}
+  });
+
+  $("ys").textContent=GBP(ySpend);
+  $("as").textContent=GBP(aSpend);
+  $("yp").textContent=GBP(Math.max(0,yPaidGross-aPaid));
+  $("yr").textContent=GBP(ySpend-(yPaidGross-aPaid));
+  $("ap").textContent=GBP(aPaid);
+  $("ar").textContent=GBP(aSpend-aPaid);
+
+  const months=Object.keys(monthly).sort();
+  let idx=months.length-1;
+  $("monthLabel").textContent=monthPretty(months[idx]);
+
+  const barOpts={plugins:{legend:{display:false},tooltip:{enabled:false}}};
+  const makeBar=el=>new Chart(el,{type:"bar",data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{data:[0,0,0,0],backgroundColor:["#2f7dff","#1f56b8","#ff4fb0","#c93686"]}]},options:barOpts});
+  const barA=makeBar(barA),barB=makeBar(barB);
+
+  function renderMonth(i){
+    const m=monthly[months[i]];
+    barA.data.datasets[0].data=[m.ys,Math.max(0,m.ypg-m.ap),m.as,m.ap];
+    barA.update();
+  }
+  renderMonth(idx);
+
+  function swipe(el){
+    let x;
+    el.ontouchstart=e=>x=e.touches[0].clientX;
+    el.ontouchend=e=>{
+      const dx=e.changedTouches[0].clientX-x;
+      if(dx< -40 && idx>0){idx--;renderMonth(idx)}        // LEFT → previous
+      if(dx> 40 && idx<months.length-1){idx++;renderMonth(idx)} // RIGHT → next
+      $("monthLabel").textContent=monthPretty(months[idx]);
+    };
+  }
+  swipe($("monthCard"));
+
+  aleeyaEvents=events;
+  $("aLedger").innerHTML=events.map(e=>`<tr><td>${e.d.toLocaleDateString("en-GB")}</td><td>${e.type}</td><td>${e.desc}</td><td>${GBP(Math.abs(e.amt))}</td></tr>`).join("");
+
+}catch(e){
+  $("errCard").style.display="block";
+  $("errText").textContent=e.message;
+}
+})();
 </script>
 
 </body>
