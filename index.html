@@ -21,7 +21,12 @@
   --pinkDark:#c93686;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--text)}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:var(--bg);
+  color:var(--text);
+}
 .wrap{max-width:480px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
 h2,h3{margin:0 0 10px 0;font-weight:800}
@@ -35,11 +40,17 @@ canvas{max-width:100%}
 
 /* Pie */
 .pieWrap{position:relative}
-.pieCenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.pieCenter{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  pointer-events:none;
+}
 
-/* Monthly */
+/* Monthly swipe */
 .slider{overflow:hidden;border-radius:14px}
-.slideTrack{display:flex;width:200%;transition:transform .26s ease}
+.slideTrack{display:flex;width:200%;transition:transform .25s ease}
 .slide{width:50%}
 
 /* Table */
@@ -51,18 +62,11 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
 th{color:var(--muted);text-align:left}
 .badge{padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12)}
-.err{display:none;border:1px solid rgba(255,79,176,.45);background:rgba(255,79,176,.1)}
-.err pre{white-space:pre-wrap;font-size:12px}
 </style>
 </head>
 
 <body>
 <div class="wrap">
-
-<div class="card err" id="errCard">
-  <h3>Error</h3>
-  <pre id="errText"></pre>
-</div>
 
 <!-- PIE -->
 <div class="card">
@@ -85,12 +89,13 @@ th{color:var(--muted);text-align:left}
   <div class="card kpi"><h3>Aleeya</h3><div class="sub">Paid</div><div class="mid" id="ap">£0</div><div class="sub">Remaining</div><div class="mid" id="ar">£0</div></div>
 </div>
 
-<!-- MONTH -->
+<!-- MONTHLY -->
 <div class="card" id="monthCard">
   <h2 id="monthLabel">—</h2>
   <div class="slider">
-    <div class="slideTrack">
-      <div class="slide"><canvas id="barA" height="160"></canvas></div>
+    <div class="slideTrack" id="track">
+      <div class="slide"><canvas id="bar" height="160"></canvas></div>
+      <div class="slide"></div>
     </div>
   </div>
 </div>
@@ -106,7 +111,9 @@ th{color:var(--muted);text-align:left}
     </div>
   </div>
   <table>
-    <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead>
+    <thead>
+      <tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr>
+    </thead>
     <tbody id="aLedger"></tbody>
   </table>
 </div>
@@ -114,16 +121,23 @@ th{color:var(--muted);text-align:left}
 </div>
 
 <script>
-const $=id=>document.getElementById(id);
-const GBP=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
-const parseDate=s=>{const p=String(s||"").split(/[\/-]/);if(p.length!==3)return null;const d=new Date(p[2],p[1]-1,p[0]);return isNaN(d)?null:d};
-const monthKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-const monthPretty=k=>new Date(k.split("-")[0],k.split("-")[1]-1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+const $ = id => document.getElementById(id);
+const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
+const parseDate = s => {
+  const p=String(s||"").split(/[\/-]/);
+  if(p.length!==3) return null;
+  const d=new Date(p[2],p[1]-1,p[0]);
+  return isNaN(d)?null:d;
+};
+const monthKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const monthPretty = k => new Date(k.split("-")[0],k.split("-")[1]-1)
+  .toLocaleDateString("en-GB",{month:"long",year:"numeric"});
 
-/* === REFUND PAIRING (CORRECT VERSION) === */
+/* --- Refund pairing (stable version) --- */
 function tokens(desc){
   const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
-  return String(desc||"").toUpperCase().replace(/[^A-Z0-9 ]/g," ")
+  return String(desc||"").toUpperCase()
+    .replace(/[^A-Z0-9 ]/g," ")
     .split(" ").filter(t=>t.length>=3&&!noise.has(t));
 }
 function similarity(A,B){
@@ -153,15 +167,15 @@ function stripRefundPairs(rows){
   return rows.filter((_,i)=>!used.has(i));
 }
 
+/* --- Main --- */
 (async()=>{
-try{
-  const activityRaw=Papa.parse(await (await fetch("data/activity.csv")).text(),{header:true}).data;
-  const payments=Papa.parse(await (await fetch("data/payments.csv")).text(),{header:true}).data;
-  const activity=stripRefundPairs(activityRaw);
+  const activityRaw = Papa.parse(await (await fetch("data/activity.csv")).text(),{header:true}).data;
+  const payments = Papa.parse(await (await fetch("data/payments.csv")).text(),{header:true}).data;
+  const activity = stripRefundPairs(activityRaw);
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
-  const events=[];
+  let events=[];
 
   payments.forEach(r=>{
     const d=parseDate(r.Date); if(!d) return;
@@ -183,11 +197,6 @@ try{
     }
   });
 
-  /* Pie guard */
-  if(ySpend + aSpend === 0){
-    throw new Error("Pie data invalid (zero spend after refund pairing)");
-  }
-
   $("ys").textContent=GBP(ySpend);
   $("as").textContent=GBP(aSpend);
   $("yp").textContent=GBP(Math.max(0,yPaidGross-aPaid));
@@ -195,44 +204,68 @@ try{
   $("ap").textContent=GBP(aPaid);
   $("ar").textContent=GBP(aSpend-aPaid);
 
-  new Chart($("pie"),{
-    type:"doughnut",
-    data:{datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],cutout:"68%",offset:[0,0]}]},
-    options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
-  });
-
   const months=Object.keys(monthly).sort();
   let idx=months.length-1;
   $("monthLabel").textContent=monthPretty(months[idx]);
 
-  const bar=new Chart($("barA"),{
+  /* Pie (NO WHITE BORDER) */
+  new Chart($("pie"),{
+    type:"doughnut",
+    data:{datasets:[{
+      data:[ySpend,aSpend],
+      backgroundColor:["#2f7dff","#ff4fb0"],
+      borderWidth:0,
+      cutout:"68%"
+    }]},
+    options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+
+  /* Bar */
+  const bar = new Chart($("bar"),{
     type:"bar",
     data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{
-      data:[monthly[months[idx]].ys,Math.max(0,monthly[months[idx]].ypg-monthly[months[idx]].ap),monthly[months[idx]].as,monthly[months[idx]].ap],
+      data:[],
       backgroundColor:["#2f7dff","#1f56b8","#ff4fb0","#c93686"],
       borderRadius:8
     }]},
     options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
   });
 
-  $("monthCard").ontouchstart=e=>startX=e.touches[0].clientX;
-  let startX;
-  $("monthCard").ontouchend=e=>{
-    const dx=e.changedTouches[0].clientX-startX;
-    if(dx<-40&&idx>0)idx--;
-    if(dx>40&&idx<months.length-1)idx++;
-    $("monthLabel").textContent=monthPretty(months[idx]);
+  function renderMonth(){
     const m=monthly[months[idx]];
     bar.data.datasets[0].data=[m.ys,Math.max(0,m.ypg-m.ap),m.as,m.ap];
     bar.update();
+    $("monthLabel").textContent=monthPretty(months[idx]);
+  }
+  renderMonth();
+
+  /* Swipe */
+  let startX=0;
+  $("monthCard").ontouchstart=e=>startX=e.touches[0].clientX;
+  $("monthCard").ontouchend=e=>{
+    const dx=e.changedTouches[0].clientX-startX;
+    if(dx<-40 && idx>0) idx--;
+    if(dx>40 && idx<months.length-1) idx++;
+    renderMonth();
   };
 
-  $("aLedger").innerHTML=events.map(e=>`<tr><td>${e.d.toLocaleDateString("en-GB")}</td><td>${e.type}</td><td>${e.desc}</td><td>${GBP(Math.abs(e.amt))}</td></tr>`).join("");
+  /* Table + filters */
+  let filter="all";
+  function renderTable(){
+    $("aLedger").innerHTML = events
+      .filter(e=>filter==="all"||e.type===filter)
+      .map(e=>`<tr>
+        <td>${e.d.toLocaleDateString("en-GB")}</td>
+        <td><span class="badge">${e.type}</span></td>
+        <td>${e.desc}</td>
+        <td>${GBP(Math.abs(e.amt))}</td>
+      </tr>`).join("");
+  }
+  $("fltAll").onclick=()=>{filter="all";renderTable()};
+  $("fltSpent").onclick=()=>{filter="spent";renderTable()};
+  $("fltPaid").onclick=()=>{filter="paid";renderTable()};
+  renderTable();
 
-}catch(e){
-  $("errCard").style.display="block";
-  $("errText").textContent=e.message;
-}
 })();
 </script>
 
