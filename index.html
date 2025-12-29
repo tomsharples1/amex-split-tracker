@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Amex Split Tracker</title>
 
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/dist/papaparse.min.js"></script>
+<!-- FIXED: correct PapaParse URL (avoids Papa undefined) -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <style>
@@ -60,10 +61,9 @@ h2,h3{margin:0 0 10px 0;font-weight:800}
 .kpi{text-align:center}
 .mid{font-size:18px;font-weight:900}
 .sub{font-size:12px;color:var(--muted)}
-
 canvas{max-width:100%}
 
-/* -------- Error card (no silent errors) -------- */
+/* Error card (no silent errors) */
 .err{
   display:none;
   border:1px solid rgba(255,79,176,.45);
@@ -77,7 +77,7 @@ canvas{max-width:100%}
   color:rgba(255,255,255,.85);
 }
 
-/* -------- Pie centre -------- */
+/* Pie centre */
 .pieWrap{position:relative}
 .pieCenter{
   position:absolute;
@@ -90,7 +90,7 @@ canvas{max-width:100%}
 .pieCenter .val{font-size:18px;font-weight:1000;margin-top:4px}
 .pieCenter .sub{font-size:12px;color:var(--muted)}
 
-/* -------- Monthly swipe "card" animation -------- */
+/* Monthly swipe "card" animation */
 .monthCardHead{
   display:flex;
   justify-content:space-between;
@@ -123,9 +123,8 @@ canvas{max-width:100%}
   width:50%;
   padding:10px 0;
 }
-.slide canvas{display:block}
 
-/* -------- Table / filter -------- */
+/* Table / filter */
 .tableHeader{
   display:flex;
   justify-content:space-between;
@@ -194,7 +193,7 @@ th{
 
     <div class="pieWrap">
       <canvas id="pie" height="220"></canvas>
-      <div class="pieCenter" id="pieCenter">
+      <div class="pieCenter">
         <div class="title" id="pcTitle">Total</div>
         <div class="val" id="pcTotal">£0</div>
         <div class="sub" id="pcTx">0 transactions</div>
@@ -236,7 +235,7 @@ th{
       <div class="monthTitle" id="monthLabel">—</div>
     </div>
 
-    <div class="slider" id="slider">
+    <div class="slider">
       <div class="slideTrack" id="track">
         <div class="slide"><canvas id="barA" height="160"></canvas></div>
         <div class="slide"><canvas id="barB" height="160"></canvas></div>
@@ -290,6 +289,19 @@ function showError(err, context=""){
 
 window.addEventListener("error", (e) => showError(e.error || e.message, "Uncaught error"));
 window.addEventListener("unhandledrejection", (e) => showError(e.reason || "Unhandled promise rejection", "Unhandled rejection"));
+
+/* =========================
+   Dependency guard (prevents Papa undefined)
+========================= */
+(function guardDeps(){
+  const missing = [];
+  if(typeof Papa === "undefined") missing.push("PapaParse (Papa)");
+  if(typeof Chart === "undefined") missing.push("Chart.js (Chart)");
+  if(missing.length){
+    showError(new Error("Missing dependency: " + missing.join(", ") + ". Check the <script src> URLs and your network/ad-blocker."), "Dependency load failed");
+    throw new Error("Dependency load failed");
+  }
+})();
 
 /* =========================
    Helpers
@@ -350,7 +362,6 @@ function similarityFromTokenSets(A,B){
   for(const t of A) if(B.has(t)) inter++;
   return inter / Math.min(A.size, B.size);
 }
-
 async function stripRefundPairsBucketed(rows){
   const buckets = new Map();
   const meta = new Array(rows.length);
@@ -369,7 +380,6 @@ async function stripRefundPairsBucketed(rows){
   for(const bucket of buckets.values()){
     const pos = bucket.pos;
     const neg = bucket.neg;
-
     if(!pos.length || !neg.length) continue;
 
     for(const ni of neg){
@@ -390,7 +400,6 @@ async function stripRefundPairsBucketed(rows){
       }
     }
   }
-
   return rows.filter((_,i)=>!used.has(i));
 }
 
@@ -426,20 +435,7 @@ function renderTable(){
 }
 
 /* =========================
-   Charts state
-========================= */
-let pieChart = null;
-
-// Monthly recap uses 2 canvases to animate “new card slides in”
-let barChartA = null;
-let barChartB = null;
-let activeChart = "A"; // which chart is currently visible
-let months = [];
-let monthly = {};
-let mIdx = 0;
-
-/* =========================
-   Swipe helpers
+   Swipe helper
 ========================= */
 function addSwipe(el, onLeft, onRight){
   let startX = null, startY = null;
@@ -466,25 +462,37 @@ function addSwipe(el, onLeft, onRight){
 }
 
 /* =========================
-   Monthly render + animation
+   Charts state
 ========================= */
-function buildMonthlyDatasetForMonth(k){
-  const m = monthly[k];
-  const yPaidNet = clamp0(m.ypg - m.ap);
-  return {
-    label: k,
-    values: [m.ys, yPaidNet, m.as, m.ap]
-  };
+let pieChart = null;
+let barChartA = null;
+let barChartB = null;
+let activeChart = "A";
+let months = [];
+let monthly = {};
+let mIdx = 0;
+
+/* =========================
+   Pie centre
+========================= */
+function setPieCenter(title, total, tx){
+  $("pcTitle").textContent = title;
+  $("pcTotal").textContent = GBP(total);
+  $("pcTx").textContent = `${Number(tx||0)} transactions`;
 }
 
+/* =========================
+   Monthly chart update
+========================= */
 function updateBarChart(chart, k){
-  const ds = buildMonthlyDatasetForMonth(k);
+  const m = monthly[k];
+  const yPaidNet = clamp0(m.ypg - m.ap);
   chart.data.labels = ["Yousef spend","Yousef paid","Aleeya spend","Aleeya paid"];
-  chart.data.datasets[0].data = ds.values;
+  chart.data.datasets[0].data = [m.ys, yPaidNet, m.as, m.ap];
   chart.update();
 }
 
-function renderMonthSlide(nextIndex, direction /* "left" | "right" */){
+function renderMonthSlide(nextIndex){
   if(nextIndex < 0 || nextIndex >= months.length) return;
 
   const kNext = months[nextIndex];
@@ -492,45 +500,18 @@ function renderMonthSlide(nextIndex, direction /* "left" | "right" */){
 
   const track = $("track");
 
-  // Determine incoming/outgoing charts
   const incoming = (activeChart === "A") ? barChartB : barChartA;
-  const outgoing = (activeChart === "A") ? barChartA : barChartB;
-
-  // Update incoming chart with next month data
   updateBarChart(incoming, kNext);
 
-  // Place incoming slide to the right (default at 0% is A visible,  -50% is B visible)
-  // If active is A and incoming is B, we animate track to -50% to reveal B.
-  // If active is B and incoming is A, we animate track to 0% to reveal A.
-  // But we also need correct "direction" feel:
-  // - swipe LEFT = next month => slide new card in from RIGHT => move track left
-  // - swipe RIGHT = previous month => slide new card in from LEFT => move track right
-  //
-  // With this 2-slide setup, the visual movement is consistent as long as we:
-  // - If active is A and we want to show B -> animate to -50%
-  // - If active is B and we want to show A -> animate to 0%
-  //
-  // The "direction" is handled by choosing nextIndex (+1 vs -1) before calling here.
   if(activeChart === "A"){
-    // A visible, B incoming
     track.style.transform = "translateX(-50%)";
     activeChart = "B";
   }else{
-    // B visible, A incoming
     track.style.transform = "translateX(0%)";
     activeChart = "A";
   }
 
   mIdx = nextIndex;
-}
-
-/* =========================
-   Pie centre state
-========================= */
-function setPieCenter(title, total, tx){
-  $("pcTitle").textContent = title;
-  $("pcTotal").textContent = GBP(total);
-  $("pcTx").textContent = `${Number(tx||0)} transactions`;
 }
 
 /* =========================
@@ -558,7 +539,7 @@ function setPieCenter(title, total, tx){
     // Aleeya ledger
     aleeyaEvents = [];
 
-    // Payments CSV: Aleeya repayments (ALL-TIME) + ledger + monthly
+    // Payments CSV: Aleeya repayments + ledger + monthly
     for(const r of payments){
       const d = parseDate(r.Date);
       if(!d) continue;
@@ -572,7 +553,7 @@ function setPieCenter(title, total, tx){
       aleeyaEvents.push({ d, type:"paid", desc:"Repayment", amt:-amt });
     }
 
-    // Activity CSV: spend / Yousef payment rows
+    // Activity CSV: spend + Yousef payment rows
     for(const r of activity){
       const d = parseDate(r.Date);
       if(!d) continue;
@@ -595,7 +576,6 @@ function setPieCenter(title, total, tx){
           bucket.ys += amt;
         }
       }else{
-        // Yousef payments on statement (negative amounts with PAYMENT)
         if(!isAleeya && /PAYMENT/i.test(desc)){
           const p = Math.abs(amt);
           yPaidGross += p;
@@ -604,7 +584,7 @@ function setPieCenter(title, total, tx){
       }
     }
 
-    // Monthly keys
+    // Months
     months = Object.keys(monthly).sort();
     if(!months.length){
       throw new Error("No monthly data found. Check data/activity.csv and data/payments.csv are present and contain Date and Amount columns.");
@@ -613,7 +593,7 @@ function setPieCenter(title, total, tx){
     $("monthLabel").textContent = monthPretty(months[mIdx]);
 
     // ALL-TIME KPIs
-    const yPaidNetAll = clamp0(yPaidGross - aPaid); // Yousef paid net of Aleeya repayments
+    const yPaidNetAll = clamp0(yPaidGross - aPaid);
     $("ys").textContent = GBP(ySpend);
     $("as").textContent = GBP(aSpend);
     $("yp").textContent = GBP(yPaidNetAll);
@@ -624,7 +604,7 @@ function setPieCenter(title, total, tx){
     // Pie center default (combined)
     setPieCenter("Total", ySpend + aSpend, yTx + aTx);
 
-    // PIE (disable tooltips & legends — removes the “small legend popup”)
+    // PIE — remove legend + remove tooltip popup
     pieChart = new Chart($("pie"),{
       type:"doughnut",
       data:{
@@ -642,12 +622,12 @@ function setPieCenter(title, total, tx){
         maintainAspectRatio:false,
         plugins:{
           legend:{display:false},
-          tooltip:{enabled:false} // IMPORTANT: removes popup
+          tooltip:{enabled:false}
         },
         onClick: (_, elements) => {
           const ds = pieChart.data.datasets[0];
 
-          // Clicked outside slices => reset
+          // Click off-slice => reset
           if(!elements || !elements.length){
             ds.offset = [0,0];
             ds.backgroundColor = ["#2f7dff","#ff4fb0"];
@@ -658,8 +638,7 @@ function setPieCenter(title, total, tx){
 
           const i = elements[0].index; // 0 Yousef, 1 Aleeya
           ds.offset = [0,0];
-          ds.offset[i] = 34; // MUCH bigger pop-out
-          // Make non-selected slice fuzzy (faded)
+          ds.offset[i] = 34; // much bigger
           ds.backgroundColor = [
             i===0 ? "#2f7dff" : "rgba(47,125,255,.18)",
             i===1 ? "#ff4fb0" : "rgba(255,79,176,.18)"
@@ -672,13 +651,13 @@ function setPieCenter(title, total, tx){
       }
     });
 
-    // BAR charts (two charts for “new card slides in” feel)
+    // BAR charts — remove legend + tooltip popup
     const barOpts = {
       responsive:true,
       maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
-        tooltip:{enabled:false} // IMPORTANT: removes popup
+        tooltip:{enabled:false}
       },
       scales:{
         x:{ ticks:{ color:"rgba(255,255,255,.75)" }, grid:{ color:"rgba(255,255,255,.06)" } },
@@ -698,18 +677,16 @@ function setPieCenter(title, total, tx){
     barChartA = new Chart($("barA"), { type:"bar", data: JSON.parse(JSON.stringify(baseData)), options: barOpts });
     barChartB = new Chart($("barB"), { type:"bar", data: JSON.parse(JSON.stringify(baseData)), options: barOpts });
 
-    // Initialize visible chart with latest month
+    // init
     updateBarChart(barChartA, months[mIdx]);
-    updateBarChart(barChartB, months[mIdx]); // keep consistent; B will be overwritten on first swipe
+    updateBarChart(barChartB, months[mIdx]);
     activeChart = "A";
     $("track").style.transform = "translateX(0%)";
 
-    // Swipe on month card
+    // swipe
     addSwipe($("monthCard"),
-      // swipe left => next month (new card slides in)
-      () => { if(mIdx < months.length - 1) renderMonthSlide(mIdx + 1, "left"); },
-      // swipe right => prev month
-      () => { if(mIdx > 0) renderMonthSlide(mIdx - 1, "right"); }
+      () => { if(mIdx < months.length - 1) renderMonthSlide(mIdx + 1); },
+      () => { if(mIdx > 0) renderMonthSlide(mIdx - 1); }
     );
 
     // Table
