@@ -106,6 +106,7 @@ th{
   display:flex;
   justify-content:space-between;
   align-items:center;
+  gap:12px;
   margin-bottom:8px;
 }
 
@@ -129,16 +130,135 @@ th{
   background:rgba(255,255,255,.08);
   color:var(--text);
 }
+
+/* Month slider/nav */
+.monthNav{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:8px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+}
+.monthBtn{
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  border-radius:12px;
+  padding:8px 10px;
+  cursor:pointer;
+  user-select:none;
+}
+.monthBtn:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+.monthLabel{
+  font-size:13px;
+  color:var(--text);
+  font-weight:700;
+  letter-spacing:.2px;
+}
+.monthHint{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:8px;
+}
+
+/* Pie popup */
+.pieWrap{
+  position:relative;
+}
+.piePopup{
+  position:absolute;
+  right:10px;
+  top:10px;
+  min-width:160px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:rgba(0,0,0,.25);
+  backdrop-filter: blur(6px);
+  display:none;
+}
+.piePopup .title{font-weight:800;font-size:13px;margin-bottom:6px}
+.piePopup .line{font-size:12px;color:var(--muted)}
+.piePopup .val{font-size:14px;font-weight:800;color:var(--text)}
+.piePopup .close{
+  position:absolute;
+  right:8px;
+  top:6px;
+  border:0;
+  background:none;
+  color:var(--muted);
+  cursor:pointer;
+  font-size:14px;
+}
+
+/* Error banner (no silent errors) */
+.err{
+  display:none;
+  border:1px solid rgba(255,79,176,.45);
+  background:rgba(255,79,176,.10);
+  color:rgba(255,255,255,.95);
+}
+.err pre{
+  white-space:pre-wrap;
+  word-break:break-word;
+  margin:10px 0 0 0;
+  font-size:12px;
+  color:rgba(255,255,255,.85);
+}
+.statusRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.statusTxt{
+  font-size:12px;
+  color:var(--muted);
+}
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
+  <!-- ERROR (no silent errors) -->
+  <div class="card err" id="errCard">
+    <h3 style="margin:0">Something went wrong</h3>
+    <div class="sub" id="errMsg" style="margin-top:6px"></div>
+    <pre id="errDetail"></pre>
+  </div>
+
   <!-- PIE -->
   <div class="card">
-    <h2>Spending</h2>
-    <canvas id="pie" height="220"></canvas>
+    <div class="statusRow">
+      <h2 style="margin:0">Spending</h2>
+      <div class="statusTxt" id="status">Loading…</div>
+    </div>
+
+    <div class="pieWrap">
+      <canvas id="pie" height="220"></canvas>
+
+      <div class="piePopup" id="piePopup">
+        <button class="close" id="pieClose" aria-label="Close">✕</button>
+        <div class="title" id="piePopTitle">Details</div>
+        <div style="display:flex;justify-content:space-between;gap:10px;margin-top:6px">
+          <div class="line">Total</div>
+          <div class="val" id="piePopTotal">£0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:10px;margin-top:6px">
+          <div class="line">Transactions</div>
+          <div class="val" id="piePopTx">0</div>
+        </div>
+        <div class="line" style="margin-top:8px" id="piePopMonth"></div>
+      </div>
+    </div>
 
     <div class="row">
       <div><span class="dot" style="background:var(--blue)"></span>Yousef</div>
@@ -148,6 +268,14 @@ th{
       <div><span class="dot" style="background:var(--pink)"></span>Aleeya</div>
       <div id="as">£0</div>
     </div>
+
+    <!-- Month slider / side-to-side -->
+    <div class="monthNav" id="monthNav" aria-label="Monthly slider">
+      <button class="monthBtn" id="prevMonth" type="button">◀</button>
+      <div class="monthLabel" id="monthLabel">—</div>
+      <button class="monthBtn" id="nextMonth" type="button">▶</button>
+    </div>
+    <div class="monthHint">Tip: use ◀ ▶ or swipe left/right on the Monthly Recap card.</div>
   </div>
 
   <!-- KPIs -->
@@ -168,8 +296,8 @@ th{
     </div>
   </div>
 
-  <!-- BAR -->
-  <div class="card">
+  <!-- MONTHLY RECAP (per-month view that slides) -->
+  <div class="card" id="recapCard">
     <h2>Monthly Recap</h2>
     <canvas id="bar" height="160"></canvas>
   </div>
@@ -177,11 +305,11 @@ th{
   <!-- TABLE -->
   <div class="card">
     <div class="tableHeader">
-      <h2>Aleeya Transactions</h2>
+      <h2 style="margin:0">Aleeya Transactions</h2>
       <div class="segment">
-        <button class="segBtn active" id="fltAll">All</button>
-        <button class="segBtn" id="fltSpent">Spent</button>
-        <button class="segBtn" id="fltPaid">Paid</button>
+        <button class="segBtn active" id="fltAll" type="button">All</button>
+        <button class="segBtn" id="fltSpent" type="button">Spent</button>
+        <button class="segBtn" id="fltPaid" type="button">Paid</button>
       </div>
     </div>
 
@@ -201,152 +329,383 @@ th{
 </div>
 
 <script>
+/* ---------- DOM helpers ---------- */
+const $ = id => document.getElementById(id);
+const setStatus = t => { $("status").textContent = t; };
+
+function showError(err, context=""){
+  console.error(err);
+  const msg = (err && err.message) ? err.message : String(err || "Unknown error");
+  $("errCard").style.display = "block";
+  $("errMsg").textContent = context ? `${context}: ${msg}` : msg;
+  $("errDetail").textContent = (err && err.stack) ? err.stack : "";
+  setStatus("Error");
+}
+
+window.addEventListener("error", (e) => {
+  showError(e.error || e.message || "Uncaught error", "Uncaught error");
+});
+window.addEventListener("unhandledrejection", (e) => {
+  showError(e.reason || "Unhandled promise rejection", "Unhandled rejection");
+});
+
 /* ---------- Helpers ---------- */
-const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
-const clamp0 = n => Math.max(0,n||0);
+const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0, Number(n||0)));
+const clamp0 = n => Math.max(0, Number(n||0));
 
 const parseDate = s => {
-  const p=String(s||"").split(/[\/-]/);
-  if(p.length!==3) return null;
-  const d=new Date(p[2],p[1]-1,p[0]);
-  return isNaN(d)?null:d;
+  const p = String(s||"").trim().split(/[\/-]/);
+  if(p.length !== 3) return null;
+  const d = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+  return isNaN(d.getTime()) ? null : d;
 };
 
 const monthKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const monthLabelPretty = key => {
+  // key: YYYY-MM
+  const [y,m] = String(key).split("-");
+  const d = new Date(Number(y), Number(m)-1, 1);
+  return d.toLocaleDateString("en-GB", { month:"long", year:"numeric" });
+};
 
 async function loadCSV(path){
-  const res=await fetch(path,{cache:"no-store"});
-  const txt=await res.text();
-  return Papa.parse(txt,{header:true,skipEmptyLines:true}).data;
+  const res = await fetch(path, { cache:"no-store" });
+  if(!res.ok){
+    throw new Error(`Failed to fetch ${path} (${res.status} ${res.statusText})`);
+  }
+  const txt = await res.text();
+  const parsed = Papa.parse(txt, { header:true, skipEmptyLines:true });
+  if(parsed.errors && parsed.errors.length){
+    const e = parsed.errors[0];
+    throw new Error(`CSV parse error in ${path}: ${e.message || "Unknown parse error"}`);
+  }
+  return parsed.data;
 }
 
 /* ---------- Refund pairing ---------- */
 function tokens(desc){
-  const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
+  const noise = new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
   return String(desc||"").toUpperCase().replace(/[^A-Z0-9 ]/g," ")
-    .split(" ").filter(t=>t.length>=3&&!noise.has(t));
+    .split(" ").filter(t => t.length >= 3 && !noise.has(t));
 }
 
 function similarity(A,B){
-  let i=0;
+  if(!A.size || !B.size) return 0;
+  let i = 0;
   for(const t of A) if(B.has(t)) i++;
-  return i/Math.min(A.size,B.size);
+  return i / Math.min(A.size, B.size);
 }
 
 async function stripRefundPairs(rows){
-  const buckets=new Map(), meta=[];
+  const buckets = new Map(), meta = [];
   rows.forEach((r,i)=>{
-    const amt=Number(r.Amount);
-    if(!amt) return;
-    const k=Math.round(Math.abs(amt)*100);
-    const t=new Set(tokens(r.Description));
-    meta[i]={amt,t};
-    buckets.set(k,buckets.get(k)||{p:[],n:[]});
-    (amt>0?buckets.get(k).p:buckets.get(k).n).push(i);
+    const amt = Number(r.Amount);
+    if(!amt || isNaN(amt)) return;
+    const k = Math.round(Math.abs(amt) * 100);
+    const t = new Set(tokens(r.Description));
+    meta[i] = { amt, t };
+    buckets.set(k, buckets.get(k) || { p:[], n:[] });
+    (amt > 0 ? buckets.get(k).p : buckets.get(k).n).push(i);
   });
 
-  const used=new Set();
+  const used = new Set();
   for(const {p,n} of buckets.values()){
     for(const ni of n){
-      let best=null,score=0;
+      if(used.has(ni)) continue;
+      let best = null, score = 0;
       for(const pi of p){
-        if(used.has(pi)||used.has(ni)) continue;
-        const s=similarity(meta[pi].t,meta[ni].t);
-        if(s>score){score=s;best=pi;}
+        if(used.has(pi)) continue;
+        const s = similarity(meta[pi]?.t || new Set(), meta[ni]?.t || new Set());
+        if(s > score){ score = s; best = pi; }
       }
-      if(best!==null&&score>=0.55){used.add(best);used.add(ni);}
+      if(best !== null && score >= 0.55){
+        used.add(best);
+        used.add(ni);
+      }
     }
   }
   return rows.filter((_,i)=>!used.has(i));
 }
 
-/* ---------- Main ---------- */
-let aleeyaEvents=[], filter="all";
+/* ---------- Table ---------- */
+let aleeyaEvents = [], filter = "all";
 function renderTable(){
-  const body=document.getElementById("aLedger");
-  body.innerHTML=aleeyaEvents
-    .filter(e=>filter==="all"||e.type===filter)
-    .sort((a,b)=>a.d-b.d)
-    .map(e=>`
+  const body = $("aLedger");
+  body.innerHTML = aleeyaEvents
+    .filter(e => filter === "all" || e.type === filter)
+    .sort((a,b) => a.d - b.d)
+    .map(e => `
       <tr>
         <td>${e.d.toLocaleDateString("en-GB")}</td>
         <td>${e.type}</td>
-        <td>${e.desc}</td>
-        <td>${GBP(e.amt)}</td>
-      </tr>`).join("");
+        <td>${escapeHtml(e.desc)}</td>
+        <td>${GBP(Math.abs(e.amt))}</td>
+      </tr>
+    `).join("");
+}
+function escapeHtml(s){
+  return String(s||"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
 ["All","Spent","Paid"].forEach(f=>{
-  document.getElementById("flt"+f).onclick=()=>{
-    filter=f.toLowerCase();
-    document.querySelectorAll(".segBtn").forEach(b=>b.classList.remove("active"));
-    document.getElementById("flt"+f).classList.add("active");
+  $("flt"+f).onclick = () => {
+    filter = f.toLowerCase();
+    document.querySelectorAll(".segBtn").forEach(b => b.classList.remove("active"));
+    $("flt"+f).classList.add("active");
     renderTable();
   };
 });
 
-(async()=>{
-  let activity=await loadCSV("data/activity.csv");
-  const payments=await loadCSV("data/payments.csv");
-  activity=await stripRefundPairs(activity);
+/* ---------- Charts + monthly slider state ---------- */
+let pieChart = null;
+let barChart = null;
 
-  let ySpend=0,aSpend=0,yPaidGross=0,aPaid=0;
-  const monthly={};
+let MONTH_KEYS = [];
+let MONTHLY = {}; // { "YYYY-MM": { ys, as, ypg, ap, ytx, atx } }
+let currentMonthIndex = 0;
 
-  const ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
+/* ---------- Render per-month (dynamic load on slide) ---------- */
+function renderMonth(idx){
+  if(!MONTH_KEYS.length) return;
 
-  payments.forEach(r=>{
-    const d=parseDate(r.Date); if(!d) return;
-    const amt=Math.abs(+r.Amount);
-    aPaid+=amt;
-    ensure(monthKey(d));
-    monthly[monthKey(d)].ap+=amt;
-    aleeyaEvents.push({d,type:"paid",desc:"Repayment",amt:-amt});
-  });
+  currentMonthIndex = idx;
+  const key = MONTH_KEYS[currentMonthIndex];
+  const m = MONTHLY[key];
 
-  activity.forEach(r=>{
-    const d=parseDate(r.Date); if(!d) return;
-    const amt=+r.Amount;
-    const m=monthKey(d); ensure(m);
-    const isAleeya=/ALEEYA/i.test(r["Card Member"]||"");
+  // month header
+  $("monthLabel").textContent = monthLabelPretty(key);
 
-    if(amt>0){
-      if(isAleeya){aSpend+=amt;monthly[m].as+=amt;aleeyaEvents.push({d,type:"spent",desc:r.Description,amt});}
-      else{ySpend+=amt;monthly[m].ys+=amt;}
-    } else if(!isAleeya && /PAYMENT/i.test(r.Description)){
-      yPaidGross+=Math.abs(amt);
-      monthly[m].ypg+=Math.abs(amt);
+  // enable/disable nav
+  $("prevMonth").disabled = currentMonthIndex <= 0;
+  $("nextMonth").disabled = currentMonthIndex >= MONTH_KEYS.length - 1;
+
+  // KPI logic (same as your original: Yousef paid net of Aleeya payments)
+  const yPaidNet = clamp0(m.ypg - m.ap);
+
+  $("ys").textContent = GBP(m.ys);
+  $("as").textContent = GBP(m.as);
+  $("yp").textContent = GBP(yPaidNet);
+  $("yr").textContent = GBP(clamp0(m.ys - yPaidNet));
+  $("ap").textContent = GBP(m.ap);
+  $("ar").textContent = GBP(clamp0(m.as - m.ap));
+
+  // Pie per month
+  pieChart.data.datasets[0].data = [m.ys, m.as];
+  pieChart.data.datasets[0].offset = [0,0]; // reset pop-out
+  pieChart.update();
+
+  // Monthly recap per month (single-month bar)
+  // Categories: Yousef spend, Yousef paid (net), Aleeya spend, Aleeya paid
+  barChart.data.labels = ["Yousef spend","Yousef paid","Aleeya spend","Aleeya paid"];
+  barChart.data.datasets[0].data = [m.ys, yPaidNet, m.as, m.ap];
+  barChart.update();
+
+  // Close popup on month change
+  hidePiePopup();
+}
+
+/* ---------- Pie popup + click expand ---------- */
+function showPiePopup(who, total, tx, monthKeyStr){
+  $("piePopTitle").textContent = who;
+  $("piePopTotal").textContent = GBP(total);
+  $("piePopTx").textContent = String(tx ?? 0);
+  $("piePopMonth").textContent = monthLabelPretty(monthKeyStr);
+  $("piePopup").style.display = "block";
+}
+function hidePiePopup(){
+  $("piePopup").style.display = "none";
+}
+$("pieClose").onclick = hidePiePopup;
+
+/* ---------- Swipe support for “slide side to side” ---------- */
+function addSwipe(el, onLeft, onRight){
+  let startX = null;
+  let startY = null;
+
+  el.addEventListener("touchstart", (e)=>{
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+  }, {passive:true});
+
+  el.addEventListener("touchend", (e)=>{
+    if(startX === null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    // horizontal swipe threshold
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)){
+      if(dx < 0) onLeft?.();
+      else onRight?.();
     }
-  });
+    startX = null; startY = null;
+  }, {passive:true});
+}
 
-  const yPaid=clamp0(yPaidGross-aPaid);
+/* ---------- Boot ---------- */
+(async()=>{
+  try{
+    setStatus("Fetching CSVs…");
 
-  document.getElementById("ys").textContent=GBP(ySpend);
-  document.getElementById("as").textContent=GBP(aSpend);
-  document.getElementById("yp").textContent=GBP(yPaid);
-  document.getElementById("yr").textContent=GBP(ySpend-yPaid);
-  document.getElementById("ap").textContent=GBP(aPaid);
-  document.getElementById("ar").textContent=GBP(aSpend-aPaid);
+    // Fetch repo data
+    let activity = await loadCSV("data/activity.csv");
+    const payments = await loadCSV("data/payments.csv");
 
-  new Chart(pie,{
-    type:"doughnut",
-    data:{datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],borderWidth:0,spacing:6,borderRadius:10,cutout:"70%"}]},
-    options:{plugins:{legend:{display:false}}}
-  });
+    setStatus("Cleaning refunds…");
+    activity = await stripRefundPairs(activity);
 
-  const labels=Object.keys(monthly).sort();
-  new Chart(bar,{
-    type:"bar",
-    data:{labels,datasets:[
-      {data:labels.map(m=>monthly[m].ys),backgroundColor:"#2f7dff",borderRadius:6},
-      {data:labels.map(m=>clamp0(monthly[m].ypg-monthly[m].ap)),backgroundColor:"#1f56b8",borderRadius:6},
-      {data:labels.map(m=>monthly[m].as),backgroundColor:"#ff4fb0",borderRadius:6},
-      {data:labels.map(m=>monthly[m].ap),backgroundColor:"#c93686",borderRadius:6}
-    ]},
-    options:{plugins:{legend:{display:false}},scales:{y:{title:{display:false}}}}
-  });
+    setStatus("Calculating…");
 
-  renderTable();
+    // Build month buckets (and tx counts)
+    MONTHLY = {};
+    const ensure = (k) => (MONTHLY[k] ??= { ys:0, as:0, ypg:0, ap:0, ytx:0, atx:0 });
+
+    aleeyaEvents = [];
+
+    // Payments CSV = Aleeya repayments (count under ap)
+    for(const r of payments){
+      const d = parseDate(r.Date);
+      if(!d) continue;
+      const amt = Math.abs(Number(r.Amount));
+      if(!amt || isNaN(amt)) continue;
+
+      const mk = monthKey(d);
+      ensure(mk).ap += amt;
+
+      aleeyaEvents.push({ d, type:"paid", desc:"Repayment", amt:-amt });
+    }
+
+    // Activity CSV = spend (and Yousef payments on statement)
+    for(const r of activity){
+      const d = parseDate(r.Date);
+      if(!d) continue;
+      const amt = Number(r.Amount);
+      if(!amt || isNaN(amt)) continue;
+
+      const mk = monthKey(d);
+      const bucket = ensure(mk);
+      const isAleeya = /ALEEYA/i.test(String(r["Card Member"]||""));
+      const desc = String(r.Description||"");
+
+      if(amt > 0){
+        if(isAleeya){
+          bucket.as += amt;
+          bucket.atx += 1;
+          aleeyaEvents.push({ d, type:"spent", desc, amt:+amt });
+        }else{
+          bucket.ys += amt;
+          bucket.ytx += 1;
+        }
+      }else{
+        // Negative amounts that represent payment on the Amex statement (Yousef)
+        if(!isAleeya && /PAYMENT/i.test(desc)){
+          bucket.ypg += Math.abs(amt);
+        }
+      }
+    }
+
+    // Sort months and default to latest
+    MONTH_KEYS = Object.keys(MONTHLY).sort();
+    if(!MONTH_KEYS.length){
+      throw new Error("No monthly data found. Check data/activity.csv and data/payments.csv are present and contain Date/Amount columns.");
+    }
+    currentMonthIndex = MONTH_KEYS.length - 1;
+
+    // Build charts once
+    // PIE
+    pieChart = new Chart($("pie"),{
+      type:"doughnut",
+      data:{
+        labels:["Yousef","Aleeya"],
+        datasets:[{
+          data:[0,0],
+          backgroundColor:["#2f7dff","#ff4fb0"],
+          borderWidth:0,
+          spacing:6,
+          borderRadius:10,
+          cutout:"70%",
+          offset:[0,0] // click pop-out
+        }]
+      },
+      options:{
+        plugins:{legend:{display:false}},
+        onClick: (_, elements) => {
+          if(!elements || !elements.length) return;
+
+          const i = elements[0].index; // 0 Yousef, 1 Aleeya
+          const mk = MONTH_KEYS[currentMonthIndex];
+          const m = MONTHLY[mk];
+
+          // Pop-out clicked slice (and visually the other stays “smaller”)
+          pieChart.data.datasets[0].offset = [0,0];
+          pieChart.data.datasets[0].offset[i] = 18;
+          pieChart.update();
+
+          if(i === 0){
+            showPiePopup("Yousef", m.ys, m.ytx, mk);
+          }else{
+            showPiePopup("Aleeya", m.as, m.atx, mk);
+          }
+        }
+      }
+    });
+
+    // BAR (single-month recap)
+    barChart = new Chart($("bar"),{
+      type:"bar",
+      data:{
+        labels:["Yousef spend","Yousef paid","Aleeya spend","Aleeya paid"],
+        datasets:[{
+          data:[0,0,0,0],
+          backgroundColor:["#2f7dff","#1f56b8","#ff4fb0","#c93686"],
+          borderRadius:6
+        }]
+      },
+      options:{
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ ticks:{ color:"rgba(255,255,255,.75)" } },
+          y:{ ticks:{ color:"rgba(255,255,255,.75)" }, grid:{ color:"rgba(255,255,255,.08)" } }
+        }
+      }
+    });
+
+    // Navigation handlers
+    $("prevMonth").onclick = () => {
+      if(currentMonthIndex > 0){
+        setStatus("Loading month…");
+        renderMonth(currentMonthIndex - 1);
+        setStatus("Ready");
+      }
+    };
+    $("nextMonth").onclick = () => {
+      if(currentMonthIndex < MONTH_KEYS.length - 1){
+        setStatus("Loading month…");
+        renderMonth(currentMonthIndex + 1);
+        setStatus("Ready");
+      }
+    };
+
+    // Swipe left/right on recap card
+    addSwipe($("recapCard"),
+      () => { if(currentMonthIndex < MONTH_KEYS.length - 1) { setStatus("Loading month…"); renderMonth(currentMonthIndex + 1); setStatus("Ready"); } },
+      () => { if(currentMonthIndex > 0) { setStatus("Loading month…"); renderMonth(currentMonthIndex - 1); setStatus("Ready"); } }
+    );
+
+    // Render
+    renderTable();
+    renderMonth(currentMonthIndex);
+
+    setStatus("Ready");
+  }catch(err){
+    showError(err, "Init failed");
+  }
 })();
 </script>
 
