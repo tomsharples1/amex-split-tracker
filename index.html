@@ -76,6 +76,13 @@ tr.paidOff {
   color: rgba(255,255,255,.55);
 }
 
+tr.repaid {
+  text-decoration: line-through;
+  text-decoration-color: #35d07f;
+  color: rgba(255,255,255,.55);
+}
+
+
 </style>
 </head>
 
@@ -194,7 +201,14 @@ function stripRefundPairs(rows){
     const d=parseDate(r.Date); if(!d) return;
     const amt=Math.abs(+r.Amount||0); if(!amt) return;
     aPaid+=amt; ensure(monthKey(d)).ap+=amt;
-    events.push({d,type:"paid",desc:"Repayment",amt:-amt});
+    /* events.push({d,type:"paid",desc:"Repayment",amt:-amt}); */ 
+    events.push({
+      d,
+      type:"paid",
+      desc:"Repayment",
+      amt:-amt,
+      repaid:true
+    });
   });
 
   const aleeyaPaymentAmounts = new Set(
@@ -335,7 +349,7 @@ function stripRefundPairs(rows){
       .filter(e=>filter==="all"||e.type===filter)
       .sort((a,b)=>b.d-a.d)   // newest first
       /* .map(e=>`<tr> */ 
-      .map(e=>`<tr class="${filter==="spent" && e.paidOff ? "paidOff" : ""}">
+      .map(e=>`<tr class="${e.type==="spent" && e.paidOff ? "paidOff" : e.type==="paid" && e.repaid ? "repaid" : ""}">
         <td>${e.d.toLocaleDateString("en-GB")}</td>
         <td><span class="badge">${e.type}</span></td>
         <td>${e.desc}</td>
