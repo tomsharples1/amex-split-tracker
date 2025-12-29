@@ -43,6 +43,17 @@ canvas{max-width:100%}
   pointer-events:none;
 }
 
+#pcTotal{
+  font-size:26px;   /* bigger total */
+  font-weight:1000;
+  margin-top:4px;
+}
+
+#pcTx{
+  font-size:13px;   /* slightly bigger transactions */
+}
+
+
 /* Monthly */
 .slider{overflow:hidden;border-radius:14px}
 .slideTrack{display:flex;width:200%;transition:transform .25s ease}
@@ -198,7 +209,7 @@ function stripRefundPairs(rows){
   $("ap").textContent=GBP(aPaid);
   $("ar").textContent=GBP(aSpend-aPaid);
 
-  /* ---------- PIE (interactive) ---------- */
+  /* ---------- PIE (interactive, animated, spaced) ---------- */
   const pie = new Chart($("pie"),{
     type:"doughnut",
     data:{
@@ -206,39 +217,58 @@ function stripRefundPairs(rows){
       datasets:[{
         data:[ySpend,aSpend],
         backgroundColor:["#2f7dff","#ff4fb0"],
-        borderWidth:0,
+        borderWidth:0,          // no white border
         cutout:"68%",
+        spacing:6,             // gap between slices
+        borderRadius:12,       // rounded slice edges
         offset:[0,0]
       }]
     },
     options:{
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false}
+      },
+      animation:{
+        duration:320,
+        easing:"easeOutCubic"   // subtle smooth expansion
+      },
       onClick:(_,els)=>{
-        const ds=pie.data.datasets[0];
+        const ds = pie.data.datasets[0];
+
+        // Reset (tap outside slices)
         if(!els.length){
-          ds.offset=[0,0];
-          $("pcTitle").textContent="Total";
-          $("pcTotal").textContent=GBP(ySpend+aSpend);
-          $("pcTx").textContent=`${yTx+aTx} transactions`;
-          pie.update(); return;
+          ds.offset = [0,0];
+          $("pcTitle").textContent = "Total";
+          $("pcTotal").textContent = GBP(ySpend + aSpend);
+          $("pcTx").textContent = `${yTx + aTx} transactions`;
+          pie.update();
+          return;
         }
-        const i=els[0].index;
-        ds.offset=[0,0]; ds.offset[i]=30;
-        if(i===0){
-          $("pcTitle").textContent="Yousef";
-          $("pcTotal").textContent=GBP(ySpend);
-          $("pcTx").textContent=`${yTx} transactions`;
-        }else{
-          $("pcTitle").textContent="Aleeya";
-          $("pcTotal").textContent=GBP(aSpend);
-          $("pcTx").textContent=`${aTx} transactions`;
+
+        // Expand selected slice
+        const i = els[0].index;
+        ds.offset = [0,0];
+        ds.offset[i] = 22;   // expansion amount (keeps centre aligned)
+
+        if(i === 0){
+          $("pcTitle").textContent = "Yousef";
+          $("pcTotal").textContent = GBP(ySpend);
+          $("pcTx").textContent = `${yTx} transactions`;
+        } else {
+          $("pcTitle").textContent = "Aleeya";
+          $("pcTotal").textContent = GBP(aSpend);
+          $("pcTx").textContent = `${aTx} transactions`;
         }
+
         pie.update();
       }
     }
   });
-  $("pcTotal").textContent=GBP(ySpend+aSpend);
-  $("pcTx").textContent=`${yTx+aTx} transactions`;
+
+  // Default centre state
+  $("pcTotal").textContent = GBP(ySpend + aSpend);
+  $("pcTx").textContent = `${yTx + aTx} transactions`;
 
   /* ---------- BAR ---------- */
   const months=Object.keys(monthly).sort();
