@@ -68,6 +68,14 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
 th{color:var(--muted);text-align:left}
 .badge{padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12)}
+
+/* New Paid Off Line */ 
+tr.paidOff {
+  text-decoration: line-through;
+  text-decoration-color: #ff4b4b;
+  color: rgba(255,255,255,.55);
+}
+
 </style>
 </head>
 
@@ -189,13 +197,28 @@ function stripRefundPairs(rows){
     events.push({d,type:"paid",desc:"Repayment",amt:-amt});
   });
 
+  const aleeyaPaymentAmounts = new Set(
+    payments
+      .map(r => Math.round(Math.abs(+r.Amount || 0) * 100))
+      .filter(Boolean)
+  );
+
+
   activity.forEach(r=>{
     const d=parseDate(r.Date); if(!d) return;
     const amt=+r.Amount||0; if(!amt) return;
     const m=monthKey(d),b=ensure(m);
     const isA=/ALEEYA/i.test(r["Card Member"]||"");
     if(amt>0){
-      if(isA){aSpend+=amt;aTx++;b.as+=amt;events.push({d,type:"spent",desc:r.Description,amt})}
+      if(isA){aSpend+=amt;aTx++;b.as+=amt;
+        /* events.push({d,type:"spent",desc:r.Description,amt})} */ 
+        events.push({
+          d,
+          type:"spent",
+          desc:r.Description,
+          amt,
+          paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
+        })}
       else{ySpend+=amt;yTx++;b.ys+=amt}
     }else if(!isA&&/PAYMENT/i.test(r.Description)){
       yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
@@ -311,7 +334,8 @@ function stripRefundPairs(rows){
     $("aLedger").innerHTML = events
       .filter(e=>filter==="all"||e.type===filter)
       .sort((a,b)=>b.d-a.d)   // newest first
-      .map(e=>`<tr>
+      /* .map(e=>`<tr> */ 
+      .map(e=>`<tr class="${filter==="spent" && e.paidOff ? "paidOff" : ""}">
         <td>${e.d.toLocaleDateString("en-GB")}</td>
         <td><span class="badge">${e.type}</span></td>
         <td>${e.desc}</td>
