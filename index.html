@@ -75,18 +75,46 @@ th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
 th{color:var(--muted);text-align:left}
 .badge{padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12)}
 
-/* New Paid Off Line */ 
+/* Paid Off Strike Through */ 
 tr.paidOff {
   text-decoration: line-through;
   text-decoration-color: #ff4b4b;
   color: rgba(255,255,255,.55);
 }
 
+/* Repaid Strike Through */ 
 tr.repaid {
   text-decoration: line-through;
   text-decoration-color: #35d07f;
   color: rgba(255,255,255,.55);
 }
+
+/* Dynamic Bar Actions */ 
+.barAction{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:rgba(255,255,255,.08);
+  font-size:13px;
+  line-height:1.4;
+}
+
+.barAction strong{
+  font-size:18px;
+  display:block;
+}
+
+.barAction .hint{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.barAction .cta{
+  margin-top:6px;
+  color:var(--pink);
+  font-weight:700;
+}
+
 
 
 </style>
@@ -134,6 +162,7 @@ tr.repaid {
   <div class="slider">
     <div class="slideTrack">
       <div class="slide"><canvas id="bar" height="160"></canvas></div>
+      <div class="barAction" id="barAction" hidden></div>
       <div class="slide"></div>
     </div>
   </div>
