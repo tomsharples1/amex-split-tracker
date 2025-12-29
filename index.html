@@ -308,4 +308,36 @@ function stripRefundPairs(rows){
 
   const pieChart=new Chart(pie,{
     type:"doughnut",
-    data:{datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],cutout:"68%",offset:[0,0]}]}
+    data:{datasets:[{data:[ySpend,aSpend],backgroundColor:["#2f7dff","#ff4fb0"],cutout:"68%",offset:[0,0]}]},
+    options:{plugins:{legend:{display:false},tooltip:{enabled:false}},
+      onClick:(_,e)=>{
+        if(!e.length){
+          pieChart.data.datasets[0].offset=[0,0];
+          pieChart.update();
+          $("pcTitle").textContent="Total";
+          $("pcTotal").textContent=GBP(ySpend+aSpend);
+          $("pcTx").textContent=(yTx+aTx)+" transactions";
+          return;
+        }
+        const idx=e[0].index;
+        pieChart.data.datasets[0].offset=[0,0];
+        pieChart.data.datasets[0].offset[idx]=34;
+        pieChart.update();
+        $("pcTitle").textContent=idx===0?"Yousef":"Aleeya";
+        $("pcTotal").textContent=GBP(idx===0?ySpend:aSpend);
+        $("pcTx").textContent=(idx===0?yTx:aTx)+" transactions";
+      }
+    }
+  });
+
+  const makeBar=(el)=>new Chart(el,{
+    type:"bar",
+    data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{data:[0,0,0,0],backgroundColor:["#2f7dff","#1f56b8","#ff4fb0","#c93686"]}]},
+    options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+  const barA=makeBar(barAEl=barA),barB=makeBar(barBEl=barB);
+})();
+</script>
+
+</body>
+</html>
