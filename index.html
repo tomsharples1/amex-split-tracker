@@ -152,6 +152,14 @@ canvas{max-width:100%}
   transition:background .2s ease, color .2s ease, transform .1s ease;
 }
 
+.segBtn.segWide{
+  flex:1.4; /* slightly wider than the others */
+}
+
+.segBtn.segWide.active{
+  font-weight:600;
+}
+
 .segBtn:active{
   transform:scale(.97);
 }
@@ -289,7 +297,7 @@ tr.repaid {
   </div>
 
   <div class="segment segment-full">
-    <button class="segBtn active" id="fltDue">Outstanding</button>
+    <button class="segBtn segWide active" id="fltDue">Outstanding</button>
     <button class="segBtn" id="fltAll">All</button>
     <button class="segBtn" id="fltSpent">Spent</button>
     <button class="segBtn" id="fltPaid">Paid</button>
@@ -615,7 +623,7 @@ function stripRefundPairs(rows){
       const remaining = Math.max(0, m.as - m.ap);
       title = `Aleeya repaid ${GBP(m.ap)} this month`;
       message = remaining > 0
-        ? `${GBP(remaining)} still Outstanding`
+        ? `${GBP(remaining)} still outstanding`
         : `This month is fully settled`;
     }
 
