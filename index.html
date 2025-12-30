@@ -427,7 +427,7 @@ function stripRefundPairs(rows){
           label = "Aleeya Spent";
           const remaining = Math.max(0, m.as - m.ap);
           cta = remaining > 0
-            ? `Repay ${GBP(remaining)} to settle`
+            ? `Repay ${GBP(remaining)} to settle this month's spending`
             : "This month is settled";
         }
 
@@ -435,7 +435,7 @@ function stripRefundPairs(rows){
           label = "Aleeya Paid";
           const remaining = Math.max(0, m.as - m.ap);
           cta = remaining > 0
-            ? `${GBP(remaining)} still outstanding`
+            ? `${GBP(remaining)} still outstanding this month`
             : "This month is settled";
         }
 
