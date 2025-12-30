@@ -204,6 +204,20 @@ tr.repaid {
   font-weight:700;
 }
 
+.progress {
+  margin-top:8px;
+  height:6px;
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.progress > span {
+  display:block;
+  height:100%;
+  border-radius:999px;
+  transition:width .4s ease;
+}
 
 
 </style>
@@ -214,7 +228,7 @@ tr.repaid {
 
 <!-- PIE -->
 <div class="card">
-  <h2>All-time spending</h2>
+  <h2>Spending</h2>
   <div class="pieWrap">
     <canvas id="pie" height="220"></canvas>
     <div class="pieCenter">
@@ -231,17 +245,24 @@ tr.repaid {
 <div class="kpiGrid">
   <div class="card kpi yousef">
     <h3>Yousef</h3>
-    <div class="sub">Remaining</div>
+    <div class="sub">Outstanding</div>
     <div class="mid remaining" id="yr">£0</div>
     <div class="sub">Paid</div>
     <div class="mid" id="yp">£0</div>
+    <div class="progress">
+      <span id="apProg" style="background:var(--pink);width:0%"></span>
+    </div>
   </div>
   <div class="card kpi aleeya">
     <h3>Aleeya</h3>
-    <div class="sub">Remaining</div>
+    <div class="sub">Outstanding</div>
     <div class="mid remaining" id="ar">£0</div>
     <div class="sub">Paid</div>
     <div class="mid" id="ap">£0</div>
+    <div class="progress">
+      <span id="ypProg" style="background:var(--blue);width:0%"></span>
+    </div>
+
   </div>
 </div>
 
@@ -314,6 +335,18 @@ const fade = (color, alpha=0.35) =>
     : color + Math.round(alpha*255).toString(16).padStart(2,"0");
 
 
+function animateNumber(el, from, to, duration=300){
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min((now - start) / duration, 1);
+    const v = from + (to - from) * p;
+    el.textContent = GBP(v);
+    if(p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+
 /* ---------- Refund pairing (stable) ---------- */
 function tokens(desc){
   const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
@@ -361,7 +394,6 @@ function stripRefundPairs(rows){
     const d=parseDate(r.Date); if(!d) return;
     const amt=Math.abs(+r.Amount||0); if(!amt) return;
     aPaid+=amt; ensure(monthKey(d)).ap+=amt;
-    /* events.push({d,type:"paid",desc:"Repayment",amt:-amt}); */ 
     events.push({
       d,
       type:"paid",
@@ -405,6 +437,13 @@ function stripRefundPairs(rows){
   $("yr").textContent=GBP(ySpend-(yPaidGross-aPaid));
   $("ap").textContent=GBP(aPaid);
   $("ar").textContent=GBP(aSpend-aPaid);
+
+  const aleeyaPct = aSpend ? (aPaid / aSpend) * 100 : 0;
+  const yousefPct = ySpend ? ((yPaidGross - aPaid) / ySpend) * 100 : 0;
+
+  $("apProg").style.width = `${Math.min(100, aleeyaPct)}%`;
+  $("ypProg").style.width = `${Math.min(100, yousefPct)}%`;
+
 
   /* ---------- PIE (interactive, animated, spaced) ---------- */
   const pie = new Chart($("pie"),{
@@ -450,11 +489,11 @@ function stripRefundPairs(rows){
 
         if(i === 0){
           $("pcTitle").textContent = "Yousef";
-          $("pcTotal").textContent = GBP(ySpend);
+          animateNumber($("pcTotal"), 0, ySpend);
           $("pcTx").textContent = `${yTx} transactions`;
         } else {
           $("pcTitle").textContent = "Aleeya";
-          $("pcTotal").textContent = GBP(aSpend);
+          animateNumber($("pcTotal"), 0, aSpend);
           $("pcTx").textContent = `${aTx} transactions`;
         }
 
@@ -464,7 +503,7 @@ function stripRefundPairs(rows){
   });
 
   // Default centre state
-  $("pcTotal").textContent = GBP(ySpend + aSpend);
+  animateNumber($("pcTotal"), 0, ySpend + aSpend);
   $("pcTx").textContent = `${yTx + aTx} transactions`;
 
   /* ---------- BAR ---------- */
@@ -519,48 +558,49 @@ function stripRefundPairs(rows){
     const action = $("barAction");
     const m = monthly[months[idx]];
 
-    // Reset base colours first
-    bar.data.datasets[0].backgroundColor = [...barBaseColors];
+    bar.data.datasets[0].backgroundColor = [...barBaseColors]
+      .map((c,ci)=> ci===i ? c : fade(c));
 
-    // Fade non-selected bars
-    bar.data.datasets[0].backgroundColor =
-      bar.data.datasets[0].backgroundColor.map((c,ci)=>
-        ci===i ? c : fade(c)
-      );
+    let title = "";
+    let message = "";
 
-    let label = "";
-    let cta = "";
+    // Yousef
+    if(i === 0){
+      title = `Yousef spent ${GBP(m.ys)} this month`;
+      message = `This is Yousef’s share for ${monthPretty(months[idx])}.`;
+    }
 
-    if(i === 0) label = "Yousef spent";
-    if(i === 1) label = "Yousef paid";
+    if(i === 1){
+      title = `Yousef paid ${GBP(m.ypg - m.ap)} this month`;
+      message = `Payments made towards this month’s balance.`;
+    }
 
+    // Aleeya
     if(i === 2){
-      label = "Spent this month";
       const remaining = Math.max(0, m.as - m.ap);
-      cta = remaining > 0
-        ? `Repay ${GBP(remaining)} to settle this month`
-        : "This month is settled";
+      title = `Aleeya spent ${GBP(m.as)} this month`;
+      message = remaining > 0
+        ? `${GBP(remaining)} still needs to be repaid`
+        : `This month is fully settled`;
     }
 
     if(i === 3){
-      label = "Paid this month";
       const remaining = Math.max(0, m.as - m.ap);
-      cta = remaining > 0
-        ? `${GBP(remaining)} still outstanding this month`
-        : "This month is settled";
+      title = `Aleeya paid ${GBP(m.ap)} this month`;
+      message = remaining > 0
+        ? `${GBP(remaining)} outstanding`
+        : `This month is fully settled`;
     }
 
-    const amount = GBP(bar.data.datasets[0].data[i]);
-
     action.innerHTML = `
-      <div class="hint">${label}</div>
-      <strong>${amount}</strong>
-      ${cta ? `<div class="cta">${cta}</div>` : ""}
+      <strong>${title}</strong>
+      <div class="hint">${message}</div>
     `;
     action.hidden = false;
 
     bar.update();
   }
+
 
   function renderMonth(){
     const m=monthly[months[idx]];
