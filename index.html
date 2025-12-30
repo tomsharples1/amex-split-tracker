@@ -482,8 +482,8 @@ function stripRefundPairs(rows){
         tooltip:{enabled:false}
       },
       animation:{
-        duration:320,
-        easing:"easeOutCubic"   // subtle smooth expansion
+        duration:260,
+        easing:"easeOutBack"   // subtle smooth expansion
       },
       onClick:(_,els)=>{
         const ds = pie.data.datasets[0];
@@ -491,6 +491,7 @@ function stripRefundPairs(rows){
         // Reset (tap outside slices)
         if(!els.length){
           ds.offset = [0,0];
+          ds.radius = ["100%","100%"];
           $("pcTitle").textContent = "Total";
           animateNumber($("pcTotal"), pieCentreValue, ySpend + aSpend);
           pieCentreValue = ySpend + aSpend;
