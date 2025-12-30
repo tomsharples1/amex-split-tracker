@@ -492,13 +492,21 @@ function stripRefundPairs(rows){
   /* Reading in CSV data */ 
   const activityRaw = Papa.parse(
     await (await fetch("data/activity.csv")).text(),
-    { header: true, skipEmptyLines: true }
-  ).data.map(normaliseHeader);
+    {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: normaliseHeader
+    }
+  ).data;
 
   const payments = Papa.parse(
     await (await fetch("data/payments.csv")).text(),
-    { header: true, skipEmptyLines: true }
-  ).data.map(normaliseHeader);
+    {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: normaliseHeader
+    }
+  ).data;
 
   const activity = stripRefundPairs(activityRaw);
 
