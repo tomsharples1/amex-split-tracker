@@ -8,9 +8,18 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DB_PATH = path.join(__dirname, "amex.db");
-const ACTIVITY_CSV = path.join(__dirname, "../data/activity.csv");
-const PAYMENTS_CSV = path.join(__dirname, "../data/payments.csv");
+// DB location (shared with server.js)
+const DB_DIR = path.join(__dirname, "data");
+const DB_PATH = path.join(DB_DIR, "amex.db");
+
+// CSV locations (NOT committed to git)
+const ACTIVITY_CSV = path.join(__dirname, "data", "activity.csv");
+const PAYMENTS_CSV = path.join(__dirname, "data", "payments.csv");
+
+// Ensure DB directory exists
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+}
 
 /* ------------------ open db ------------------ */
 const db = new sqlite3.Database(DB_PATH);
@@ -46,6 +55,7 @@ function insertMany(table, rows) {
 /* ------------------ header normalisation ------------------ */
 function normalizeHeader(header) {
   return header
+    .replace(/^\uFEFF/, "")   // remove BOM if present
     .toLowerCase()
     .trim()
     .replace(/£|\$/g, "")
