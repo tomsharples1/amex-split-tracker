@@ -40,7 +40,7 @@ app.get("/activity", async (_, res) => {
     const rows = await all(`
       SELECT *
       FROM activity
-      ORDER BY date DESC
+      ORDER BY rowid DESC
     `);
     res.json(rows);
   } catch (err) {
@@ -54,7 +54,7 @@ app.get("/payments", async (_, res) => {
     const rows = await all(`
       SELECT *
       FROM payments
-      ORDER BY date DESC
+      ORDER BY rowid DESC
     `);
     res.json(rows);
   } catch (err) {
