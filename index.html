@@ -34,11 +34,12 @@ body{
 
   background:
     radial-gradient(
-      1200px at 50% -20%,
-      #18213a 0%,
-      #0b0f19 60%
+      1400px at 50% -30%,
+      rgba(24,33,58,.85) 0%,
+      #0b0f19 75%
     );
 }
+
 .wrap{max-width:480px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
 
@@ -77,15 +78,9 @@ canvas{max-width:100%}
   transform:translateY(1px);
 }
 
-
-.kpi h3{
-  color:var(--muted);
-}
-
-.kpi:nth-child(2) h3{
-  color:var(--pink);
-}
-
+/* KPI Headings */ 
+.kpi.yousef h3{color:var(--blue);}
+.kpi.aleeya h3{color:var(--pink);}
 
 /* Pie */
 .pieWrap{position:relative}
@@ -97,11 +92,23 @@ canvas{max-width:100%}
   pointer-events:none;
 }
 
-#pcTotal{
-  font-size:26px;   /* bigger total */
-  font-weight:1000;
-  margin-top:4px;
+#pcTitle{
+  font-size:12px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--muted);
 }
+
+
+#pcTotal{
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:-.01em;
+  margin-top:4px;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
 
 #pcTx{
   font-size:13px;   /* slightly bigger transactions */
@@ -217,14 +224,14 @@ tr.repaid {
 
 <!-- KPIs -->
 <div class="kpiGrid">
-  <div class="card kpi">
+  <div class="card kpi yousef">
     <h3>Yousef</h3>
     <div class="sub">Remaining</div>
     <div class="mid remaining" id="yr">£0</div>
     <div class="sub">Paid</div>
     <div class="mid" id="yp">£0</div>
   </div>
-  <div class="card kpi">
+  <div class="card kpi aleeya">
     <h3>Aleeya</h3>
     <div class="sub">Remaining</div>
     <div class="mid remaining" id="ar">£0</div>
