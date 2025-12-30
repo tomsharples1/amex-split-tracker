@@ -453,9 +453,9 @@ function similarity(A,B){
 function stripRefundPairs(rows){
   const buckets=new Map(),meta=[];
   rows.forEach((r,i)=>{
-    const amt=+r.Amount; if(!amt) return;
+    const amt=+r.amount; if(!amt) return;
     const k=Math.round(Math.abs(amt)*100);
-    meta[i]={amt,t:new Set(tokens(r.Description))};
+    meta[i]={amt,t:new Set(tokens(r.description))};
     buckets.set(k,buckets.get(k)||{p:[],n:[]});
     (amt>0?buckets.get(k).p:buckets.get(k).n).push(i);
   });
@@ -474,8 +474,13 @@ function stripRefundPairs(rows){
 }
 
 (async()=>{
-  const activityRaw = Papa.parse(await (await fetch("data/activity.csv")).text(),{header:true}).data;
-  const payments = Papa.parse(await (await fetch("data/payments.csv")).text(),{header:true}).data;
+  const activityRaw = await fetch("http://localhost:3000/activity")
+    .then(r => r.json());
+
+  const payments = await fetch("http://localhost:3000/payments")
+    .then(r => r.json());
+
+  
   const activity = stripRefundPairs(activityRaw);
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
@@ -483,8 +488,8 @@ function stripRefundPairs(rows){
   let events=[];
 
   payments.forEach(r=>{
-    const d=parseDate(r.Date); if(!d) return;
-    const amt=Math.abs(+r.Amount||0); if(!amt) return;
+    const d=parseDate(r.date); if(!d) return;
+    const amt=Math.abs(+r.amount||0); if(!amt) return;
     aPaid+=amt; ensure(monthKey(d)).ap+=amt;
     events.push({
       d,
@@ -497,28 +502,28 @@ function stripRefundPairs(rows){
 
   const aleeyaPaymentAmounts = new Set(
     payments
-      .map(r => Math.round(Math.abs(+r.Amount || 0) * 100))
+      .map(r => Math.round(Math.abs(+r.amount || 0) * 100))
       .filter(Boolean)
   );
 
 
   activity.forEach(r=>{
-    const d=parseDate(r.Date); if(!d) return;
-    const amt=+r.Amount||0; if(!amt) return;
+    const d=parseDate(r.date); if(!d) return;
+    const amt=+r.amount||0; if(!amt) return;
     const m=monthKey(d),b=ensure(m);
-    const isA=/ALEEYA/i.test(r["Card Member"]||"");
+    const isA=/ALEEYA/i.test(r["card_member"]||"");
     if(amt>0){
       if(isA){aSpend+=amt;aTx++;b.as+=amt;
-        /* events.push({d,type:"spent",desc:r.Description,amt})} */ 
+        /* events.push({d,type:"spent",desc:r.description,amt})} */ 
         events.push({
           d,
           type:"spent",
-          desc:r.Description,
+          desc:r.description,
           amt,
           paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
         })}
       else{ySpend+=amt;yTx++;b.ys+=amt}
-    }else if(!isA&&/PAYMENT/i.test(r.Description)){
+    }else if(!isA&&/PAYMENT/i.test(r.description)){
       yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
     }
   });
