@@ -411,19 +411,6 @@ function normaliseHeader(header){
     .replace(/\s+/g, "_");      // spaces → underscore
 }
 
-function normaliseRow(row){
-  const out = {};
-  for (const [key, value] of Object.entries(row)) {
-    const cleanKey = normaliseHeader(key);
-    if (!cleanKey) continue;
-
-    out[cleanKey] =
-      typeof value === "string" ? value.trim() : value;
-  }
-  return out;
-}
-
-
 const monthKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
 const monthPretty = k => new Date(k.split("-")[0],k.split("-")[1]-1)
   .toLocaleDateString("en-GB",{month:"long",year:"numeric"});
@@ -506,12 +493,12 @@ function stripRefundPairs(rows){
   const activityRaw = Papa.parse(
     await (await fetch("data/activity.csv")).text(),
     { header: true, skipEmptyLines: true }
-  ).data.map(normaliseRow);
+  ).data.map(normaliseHeader);
 
   const payments = Papa.parse(
     await (await fetch("data/payments.csv")).text(),
     { header: true, skipEmptyLines: true }
-  ).data.map(normaliseRow);
+  ).data.map(normaliseHeader);
 
   const activity = stripRefundPairs(activityRaw);
 
