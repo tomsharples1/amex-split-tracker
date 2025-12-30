@@ -371,8 +371,57 @@ function stripRefundPairs(rows){
   $("pcTx").textContent = `${yTx + aTx} transactions`;
 
   /* ---------- BAR ---------- */
+  function updateBarAction(i){
+    const action = $("barAction");
+    const m = monthly[months[idx]];
+
+    // Reset base colours first
+    bar.data.datasets[0].backgroundColor = [...barBaseColors];
+
+    // Fade non-selected bars
+    bar.data.datasets[0].backgroundColor =
+      bar.data.datasets[0].backgroundColor.map((c,ci)=>
+        ci===i ? c : fade(c)
+      );
+
+    let label = "";
+    let cta = "";
+
+    if(i === 0) label = "Yousef spent";
+    if(i === 1) label = "Yousef paid";
+
+    if(i === 2){
+      label = "Spent this month";
+      const remaining = Math.max(0, m.as - m.ap);
+      cta = remaining > 0
+        ? `Repay ${GBP(remaining)} to settle this month`
+        : "This month is settled";
+    }
+
+    if(i === 3){
+      label = "Paid this month";
+      const remaining = Math.max(0, m.as - m.ap);
+      cta = remaining > 0
+        ? `${GBP(remaining)} still outstanding this month`
+        : "This month is settled";
+    }
+
+    const amount = GBP(bar.data.datasets[0].data[i]);
+
+    action.innerHTML = `
+      <div class="hint">${label}</div>
+      <strong>${amount}</strong>
+      ${cta ? `<div class="cta">${cta}</div>` : ""}
+    `;
+    action.hidden = false;
+
+    bar.update();
+  }
+
+
   const months=Object.keys(monthly).sort();
   let idx=months.length-1;
+  let selectedBarIndex = null;
   const bar=new Chart($("bar"),{
     type:"bar",
     data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{
@@ -394,62 +443,19 @@ function stripRefundPairs(rows){
       onClick:(evt, els)=>{
         const action = $("barAction");
 
-        // Reset if clicking outside bars
+        // Click outside → reset
         if(!els.length){
-          bar.data.datasets[0].backgroundColor=[...barBaseColors]
+          selectedBarIndex = null;
+          bar.data.datasets[0].backgroundColor = [...barBaseColors];
           action.hidden = true;
           bar.update();
           return;
         }
 
-        const i = els[0].index;
-        const m = monthly[months[idx]];
-
-        // Shrink non-selected bars
-        bar.data.datasets[0].backgroundColor = [...barBaseColors];
-
-        bar.data.datasets[0].backgroundColor =
-          bar.data.datasets[0].backgroundColor.map((c,ci)=>
-            ci===i ? c : fade(c)
-          );
-
-        let label="", hint="", cta="";
-
-        if(i===0){ // Yousef spent
-          label = "Yousef Spent";
-        }
-
-        if(i===1){ // Yousef paid
-          label = "Yousef Paid";
-        }
-
-        if(i===2){ // Aleeya spent
-          label = "Aleeya Spent";
-          const remaining = Math.max(0, m.as - m.ap);
-          cta = remaining > 0
-            ? `Repay ${GBP(remaining)} to settle this month`
-            : "This month is settled";
-        }
-
-        if(i===3){ // Aleeya paid
-          label = "Aleeya Paid";
-          const remaining = Math.max(0, m.as - m.ap);
-          cta = remaining > 0
-            ? `${GBP(remaining)} still outstanding this month`
-            : "This month is settled";
-        }
-
-        const amount = GBP(bar.data.datasets[0].data[i]);
-
-        action.innerHTML = `
-          <div class="hint">${label}</div>
-          <strong>${amount}</strong>
-          ${cta ? `<div class="cta">${cta}</div>` : ""}
-        `;
-        action.hidden = false;
-
-        bar.update();
+        selectedBarIndex = els[0].index;
+        updateBarAction(selectedBarIndex);
       }
+
       }
   });
 
@@ -472,11 +478,16 @@ function stripRefundPairs(rows){
   let startX=0;
   $("monthCard").ontouchstart=e=>startX=e.touches[0].clientX;
   $("monthCard").ontouchend=e=>{
-    const dx=e.changedTouches[0].clientX-startX;
-    if(dx>40 && idx>0) idx--;          // swipe right → previous
-    if(dx<-40 && idx<months.length-1) idx++; // swipe left → next
+  const dx=e.changedTouches[0].clientX-startX;
+    if(dx>40 && idx>0) idx--;
+    if(dx<-40 && idx<months.length-1) idx++;
     renderMonth();
+
+    if(selectedBarIndex !== null){
+      updateBarAction(selectedBarIndex);
+    }
   };
+ 
 
   /* ---------- TABLE ---------- */
   let filter="all";
