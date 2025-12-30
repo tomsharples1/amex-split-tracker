@@ -378,7 +378,57 @@ function stripRefundPairs(rows){
       ],
       borderRadius:8
     }]},
-    options:{plugins:{legend:{display:false},tooltip:{enabled:false}}}
+    options:{onClick:(evt, els)=>{
+      const action = $("barAction");
+
+      // Reset if clicking outside bars
+      if(!els.length){
+        bar.data.datasets[0].backgroundColor=[
+          cssVar("--blue"),
+          cssVar("--blueDark"),
+          cssVar("--pink"),
+          cssVar("--pinkDark")
+        ];
+        action.hidden = true;
+        bar.update();
+        return;
+      }
+
+      const i = els[0].index;
+      const m = monthly[months[idx]];
+
+      // Shrink non-selected bars
+      bar.data.datasets[0].backgroundColor =
+        bar.data.datasets[0].backgroundColor.map((c,ci)=>
+          ci===i ? c : c + "55"
+        );
+
+      let label="", hint="", cta="";
+
+      if(i===2 || i===3){ // Aleeya bars
+        const remaining = Math.max(0, m.as - m.ap);
+        if(i===2){
+          label = "Aleeya spent";
+          hint = "Outstanding this month";
+        }else{
+          label = "Aleeya paid";
+          hint = "Payments so far";
+        }
+        cta = remaining>0
+          ? `👉 Repay ${GBP(remaining)} to settle`
+          : "This month is settled";
+      }
+
+      action.innerHTML = `
+        <strong>${GBP(bar.data.datasets[0].data[i])}</strong>
+        <div class="hint">${label} • ${hint}</div>
+        <div class="cta">${cta}</div>
+      `;
+      action.hidden = false;
+
+      bar.update();
+    }
+    }
   });
 
   function renderMonth(){
