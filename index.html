@@ -444,13 +444,13 @@ function stripRefundPairs(rows){
     }
   });
 
-  $("ys").textContent=GBP(ySpend);
-  $("as").textContent=GBP(aSpend);
-  $("yp").textContent=GBP(Math.max(0,yPaidGross-aPaid));
-  $("yr").textContent=GBP(ySpend-(yPaidGross-aPaid));
-  $("ap").textContent=GBP(aPaid);
-  $("ar").textContent=GBP(aSpend-aPaid);
 
+  $("yp").textContent = GBP(Math.max(0, yPaidGross - aPaid));
+  $("yr").textContent = GBP(ySpend - (yPaidGross - aPaid));
+  $("ap").textContent = GBP(aPaid);
+  $("ar").textContent = GBP(aSpend - aPaid);
+
+  /* Progress Bar */
   const aleeyaPct = aSpend ? (aPaid / aSpend) * 100 : 0;
   const yousefPct = ySpend ? ((yPaidGross - aPaid) / ySpend) * 100 : 0;
 
