@@ -398,9 +398,18 @@ const displayType = type =>
 
 const parseDate = s => {
   if (!s) return null;
+
+  // Handle DD/MM/YYYY
+  const m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    const [_, d, mo, y] = m;
+    return new Date(y, mo - 1, d);
+  }
+
   const d = new Date(s);
   return isNaN(d) ? null : d;
 };
+
 
 /* ---------- CSV normalisation (headers only) ---------- */
 function normaliseHeader(header){
