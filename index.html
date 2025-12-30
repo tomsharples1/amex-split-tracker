@@ -245,7 +245,7 @@ tr.repaid {
     <h3>Yousef</h3>
     <div class="sub">Outstanding</div>
     <div class="mid remaining" id="yr">£0</div>
-    <div class="sub">Paid</div>
+    <div class="sub">Repaid</div>
     <div class="mid" id="yp">£0</div>
     <div class="progress">
       <span id="ypProg" style="background:var(--blue);width:0%"></span>
@@ -255,7 +255,7 @@ tr.repaid {
     <h3>Aleeya</h3>
     <div class="sub">Outstanding</div>
     <div class="mid remaining" id="ar">£0</div>
-    <div class="sub">Paid</div>
+    <div class="sub">Repaid</div>
     <div class="mid" id="ap">£0</div>
     <div class="progress">
       <span id="apProg" style="background:var(--pink);width:0%"></span>
@@ -289,7 +289,7 @@ tr.repaid {
   </div>
 
   <div class="segment segment-full">
-    <button class="segBtn active" id="fltDue">Due</button>
+    <button class="segBtn active" id="fltDue">Outstanding</button>
     <button class="segBtn" id="fltAll">All</button>
     <button class="segBtn" id="fltSpent">Spent</button>
     <button class="segBtn" id="fltPaid">Paid</button>
@@ -539,7 +539,7 @@ function stripRefundPairs(rows){
   let selectedBarIndex = null;
   const bar=new Chart($("bar"),{
     type:"bar",
-    data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{
+    data:{labels:["Spent","Repaid","Spent","Repaid"],datasets:[{
       data:[],
       backgroundColor:[
         cssVar("--blue"),
@@ -598,7 +598,7 @@ function stripRefundPairs(rows){
     }
 
     if(i === 1){
-      title = `Yousef paid ${GBP(m.ypg - m.ap)} this month`;
+      title = `Yousef repaid ${GBP(m.ypg - m.ap)} this month`;
       message = `Payments made towards this month’s balance.`;
     }
 
@@ -607,15 +607,15 @@ function stripRefundPairs(rows){
       const remaining = Math.max(0, m.as - m.ap);
       title = `Aleeya spent ${GBP(m.as)} this month`;
       message = remaining > 0
-        ? `${GBP(remaining)} still needs to be repaid`
+        ? `Next: Repay ${GBP(remaining)} to settle this month`
         : `This month is fully settled`;
     }
 
     if(i === 3){
       const remaining = Math.max(0, m.as - m.ap);
-      title = `Aleeya paid ${GBP(m.ap)} this month`;
+      title = `Aleeya repaid ${GBP(m.ap)} this month`;
       message = remaining > 0
-        ? `${GBP(remaining)} outstanding`
+        ? `${GBP(remaining)} still Outstanding`
         : `This month is fully settled`;
     }
 
