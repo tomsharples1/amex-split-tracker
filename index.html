@@ -250,7 +250,7 @@ tr.repaid {
     <div class="sub">Paid</div>
     <div class="mid" id="yp">£0</div>
     <div class="progress">
-      <span id="apProg" style="background:var(--pink);width:0%"></span>
+      <span id="ypProg" style="background:var(--pink);width:0%"></span>
     </div>
   </div>
   <div class="card kpi aleeya">
@@ -260,7 +260,7 @@ tr.repaid {
     <div class="sub">Paid</div>
     <div class="mid" id="ap">£0</div>
     <div class="progress">
-      <span id="ypProg" style="background:var(--blue);width:0%"></span>
+      <span id="apProg" style="background:var(--blue);width:0%"></span>
     </div>
 
   </div>
@@ -346,6 +346,21 @@ function animateNumber(el, from, to, duration=300){
   requestAnimationFrame(tick);
 }
 
+function animateInt(el, from, to, suffix="", duration=250){
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min((now - start) / duration, 1);
+    const v = Math.round(from + (to - from) * p);
+    el.textContent = `${v}${suffix}`;
+    if(p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+
+/* Default inital pie centre value for animation */ 
+let pieCentreValue = 0;
+let pieCentreTx = 0;
 
 /* ---------- Refund pairing (stable) ---------- */
 function tokens(desc){
@@ -476,8 +491,10 @@ function stripRefundPairs(rows){
         if(!els.length){
           ds.offset = [0,0];
           $("pcTitle").textContent = "Total";
-          $("pcTotal").textContent = GBP(ySpend + aSpend);
-          $("pcTx").textContent = `${yTx + aTx} transactions`;
+          animateNumber($("pcTotal"), pieCentreValue, ySpend + aSpend);
+          pieCentreValue = ySpend + aSpend;
+          animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
+          pieCentreTx = yTx + aTx;
           pie.update();
           return;
         }
@@ -489,12 +506,19 @@ function stripRefundPairs(rows){
 
         if(i === 0){
           $("pcTitle").textContent = "Yousef";
-          animateNumber($("pcTotal"), 0, ySpend);
-          $("pcTx").textContent = `${yTx} transactions`;
+          animateNumber($("pcTotal"), pieCentreValue, ySpend);
+          pieCentreValue = ySpend;
+          
+          animateInt($("pcTx"), pieCentreTx, yTx, " transactions");
+          pieCentreTx = yTx;
+
         } else {
           $("pcTitle").textContent = "Aleeya";
-          animateNumber($("pcTotal"), 0, aSpend);
-          $("pcTx").textContent = `${aTx} transactions`;
+          animateNumber($("pcTotal"), pieCentreValue, aSpend);
+          pieCentreValue = aSpend; 
+          
+          animateInt($("pcTx"), pieCentreTx, aTx, " transactions");
+          pieCentreTx = aTx;
         }
 
         pie.update();
@@ -503,8 +527,11 @@ function stripRefundPairs(rows){
   });
 
   // Default centre state
-  animateNumber($("pcTotal"), 0, ySpend + aSpend);
-  $("pcTx").textContent = `${yTx + aTx} transactions`;
+  animateNumber($("pcTotal"), pieCentreValue, ySpend + aSpend);
+  pieCentreValue = ySpend + aSpend;
+
+  animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
+  pieCentreTx = yTx + aTx;
 
   /* ---------- BAR ---------- */
   const months=Object.keys(monthly).sort();
