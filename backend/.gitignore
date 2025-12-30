@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+
+# local databases
+*.db
+
+# raw data
+data/
+
+# OS junk
+.DS_Store
+
+# local scripts
+refresh.sh
+
