@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import sqlite3 from "sqlite3";
 import { fileURLToPath } from "url";
+import { spawn } from "child_process";
 
 /* ------------------ paths ------------------ */
 const __filename = fileURLToPath(import.meta.url);
@@ -17,21 +18,45 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 /* ------------------ db ------------------ */
-const db = new sqlite3.Database(DB_PATH, err => {
-  if (err) {
-    console.error("❌ Failed to open database:", err.message);
-  }
-});
+const db = new sqlite3.Database(DB_PATH);
+
+/* ------------------ auto-import ------------------ */
+function ensureTables() {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='activity'`,
+      (err, row) => {
+        if (err) return reject(err);
+        if (row) return resolve(); // tables already exist
+
+        console.log("🟡 No tables found. Running importer…");
+
+        const child = spawn("node", ["import.js"], {
+          cwd: __dirname,
+          stdio: "inherit"
+        });
+
+        child.on("exit", code => {
+          if (code === 0) {
+            console.log("✅ Import complete");
+            resolve();
+          } else {
+            reject(new Error("Importer failed"));
+          }
+        });
+      }
+    );
+  });
+}
 
 /* ------------------ app ------------------ */
 const app = express();
 app.use(cors());
 
-/* ------------------ helpers ------------------ */
-function all(sql, params = []) {
-  return new Promise((res, rej) => {
-    db.all(sql, params, (err, rows) => (err ? rej(err) : res(rows)));
-  });
+function all(sql) {
+  return new Promise((res, rej) =>
+    db.all(sql, [], (err, rows) => (err ? rej(err) : res(rows)))
+  );
 }
 
 /* ------------------ routes ------------------ */
@@ -65,6 +90,14 @@ app.get("/payments", async (_, res) => {
 
 /* ------------------ start ------------------ */
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ API running on port ${PORT}`);
-});
+
+ensureTables()
+  .then(() => {
+    app.listen(PORT, () =>
+      console.log(`✅ API running on port ${PORT}`)
+    );
+  })
+  .catch(err => {
+    console.error("❌ Startup failed:", err);
+    process.exit(1);
+  });
