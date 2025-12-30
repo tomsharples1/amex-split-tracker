@@ -396,12 +396,7 @@ function stripRefundPairs(rows){
 
         // Reset if clicking outside bars
         if(!els.length){
-          bar.data.datasets[0].backgroundColor=[
-            cssVar("--blue"),
-            cssVar("--blueDark"),
-            cssVar("--pink"),
-            cssVar("--pinkDark")
-          ];
+          bar.data.datasets[0].backgroundColor=[...barBaseColors]
           action.hidden = true;
           bar.update();
           return;
@@ -411,6 +406,8 @@ function stripRefundPairs(rows){
         const m = monthly[months[idx]];
 
         // Shrink non-selected bars
+        bar.data.datasets[0].backgroundColor = [...barBaseColors];
+
         bar.data.datasets[0].backgroundColor =
           bar.data.datasets[0].backgroundColor.map((c,ci)=>
             ci===i ? c : fade(c)
@@ -419,26 +416,28 @@ function stripRefundPairs(rows){
         let label="", hint="", cta="";
 
         if(i===0){ // Yousef spent
-          label = "Yousef spent";
+          label = "Yousef Spent";
         }
 
         if(i===1){ // Yousef paid
-          label = "Yousef paid";
+          label = "Yousef Paid";
         }
 
         if(i===2){ // Aleeya spent
-          label = "Aleeya spent";
+          label = "Aleeya Spent";
+          const remaining = Math.max(0, m.as - m.ap);
+          cta = remaining > 0
+            ? `Repay ${GBP(remaining)} to settle`
+            : "This month is settled";
         }
 
         if(i===3){ // Aleeya paid
-          label = "Aleeya paid";
+          label = "Aleeya Paid";
+          const remaining = Math.max(0, m.as - m.ap);
+          cta = remaining > 0
+            ? `${GBP(remaining)} still outstanding`
+            : "This month is settled";
         }
-
-        const remaining = Math.max(0, m.as - m.ap);
-        cta = remaining>0
-          ? `Repay ${GBP(remaining)} to settle`
-          : "This month is settled";
-
 
         const amount = GBP(bar.data.datasets[0].data[i]);
 
@@ -453,6 +452,13 @@ function stripRefundPairs(rows){
       }
       }
   });
+
+  const barBaseColors = [
+    cssVar("--blue"),
+    cssVar("--blueDark"),
+    cssVar("--pink"),
+    cssVar("--pinkDark")
+  ];
 
   function renderMonth(){
     const m=monthly[months[idx]];
