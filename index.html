@@ -509,7 +509,7 @@ function stripRefundPairs(rows){
  
 
   /* ---------- TABLE ---------- */
-  let filter="all";
+  let filter="due";
   function setActive(btn){
     ["fltAll","fltSpent","fltPaid", "fltDue"].forEach(id=>$(id).classList.remove("active"));
     btn.classList.add("active");
