@@ -468,11 +468,12 @@ function stripRefundPairs(rows){
       datasets:[{
         data:[ySpend,aSpend],
         backgroundColor:[cssVar("--blue"), cssVar("--pink")],
-        borderWidth:0,          // no white border
+        borderWidth:0,
         cutout:"68%",
-        spacing:6,             // gap between slices
-        borderRadius:12,       // rounded slice edges
-        offset:[0,0]
+        spacing:6,
+        borderRadius:12,
+        offset:[0,0],
+        radius:["100%","100%"]
       }]
     },
     options:{
@@ -502,7 +503,7 @@ function stripRefundPairs(rows){
         // Expand selected slice
         const i = els[0].index;
         ds.offset = [0,0];
-        ds.offset[i] = 22;   // expansion amount (keeps centre aligned)
+        ds.offset[i] = 10;   // expansion amount (keeps centre aligned)
 
         if(i === 0){
           $("pcTitle").textContent = "Yousef";
