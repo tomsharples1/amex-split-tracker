@@ -223,7 +223,7 @@ const cssVar = name =>
 const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
 const displayType = type =>
   type === "paid" ? "Paid" :
-  type === "spent" ? "Spent" :
+  type === "spent" ? "Spend" :
   type;
 
 const parseDate = s => {
