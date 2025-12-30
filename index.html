@@ -13,7 +13,8 @@
 
 <link rel="apple-touch-icon" href="icons/icon-1024.png">
 
-
+<!-- Papa for reading csv files -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <style>
@@ -401,6 +402,28 @@ const parseDate = s => {
   return isNaN(d) ? null : d;
 };
 
+/* ---------- CSV normalisation (headers only) ---------- */
+function normaliseHeader(header){
+  return String(header || "")
+    .toLowerCase()
+    .replace(/[^a-z ]+/g, "")   // remove everything except letters + spaces
+    .trim()
+    .replace(/\s+/g, "_");      // spaces → underscore
+}
+
+function normaliseRow(row){
+  const out = {};
+  for (const [key, value] of Object.entries(row)) {
+    const cleanKey = normaliseHeader(key);
+    if (!cleanKey) continue;
+
+    out[cleanKey] =
+      typeof value === "string" ? value.trim() : value;
+  }
+  return out;
+}
+
+
 const monthKey = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
 const monthPretty = k => new Date(k.split("-")[0],k.split("-")[1]-1)
   .toLocaleDateString("en-GB",{month:"long",year:"numeric"});
@@ -473,13 +496,23 @@ function stripRefundPairs(rows){
 }
 
 (async()=>{
-  const activityRaw = await fetch("http://localhost:3001/activity")
-    .then(r => r.json());
+  /*
+  const API_BASE = "http://localhost:3001";
+  const activityRaw = await fetch(`${API_BASE}/activity`).then(r => r.json());
+  const payments = await fetch(`${API_BASE}/payments`).then(r => r.json());
+  */ 
 
-  const payments = await fetch("http://localhost:3001/payments")
-    .then(r => r.json());
+  /* Reading in CSV data */ 
+  const activityRaw = Papa.parse(
+    await (await fetch("data/activity.csv")).text(),
+    { header: true, skipEmptyLines: true }
+  ).data.map(normaliseRow);
 
-  
+  const payments = Papa.parse(
+    await (await fetch("data/payments.csv")).text(),
+    { header: true, skipEmptyLines: true }
+  ).data.map(normaliseRow);
+
   const activity = stripRefundPairs(activityRaw);
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
