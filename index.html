@@ -94,6 +94,45 @@ canvas{max-width:100%}
   padding:0;
 }
 
+/* KPI Progress Bars */ 
+.kpiVertical{
+  display:flex;
+  align-items:stretch;
+  gap:12px;
+}
+
+.kpiContent{
+  flex:1;
+  text-align:center;
+}
+
+.kpiBar{
+  width:6px;
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  position:relative;
+  overflow:hidden;
+}
+
+.kpiBar span{
+  position:absolute;
+  bottom:0;
+  left:0;
+  width:100%;
+  height:0%;
+  border-radius:999px;
+  transition:height .4s ease;
+}
+
+.kpiBar.left{
+  margin-right:4px;
+}
+
+.kpiBar.right{
+  margin-left:4px;
+}
+
+
 
 /* Pie */
 .pieWrap{position:relative}
@@ -263,25 +302,31 @@ tr.repaid {
   <div class="divider"></div>
 
   <div class="kpiGrid">
-    <div class="kpi yousef">
-      <h3>Yousef</h3>
-      <div class="sub">Outstanding</div>
-      <div class="mid remaining" id="yr">£0</div>
-      <div class="sub">Repaid</div>
-      <div class="mid" id="yp">£0</div>
-      <div class="progress">
-        <span id="ypProg" style="background:var(--blue);width:0%"></span>
+    <div class="kpi yousef kpiVertical">
+      <div class="kpiBar left">
+        <span id="ypProg"></span>
+      </div>
+
+      <div class="kpiContent">
+        <h3>Yousef</h3>
+        <div class="sub">Outstanding</div>
+        <div class="mid remaining" id="yr">£0</div>
+        <div class="sub">Repaid</div>
+        <div class="mid" id="yp">£0</div>
       </div>
     </div>
 
-    <div class="kpi aleeya">
-      <h3>Aleeya</h3>
-      <div class="sub">Outstanding</div>
-      <div class="mid remaining" id="ar">£0</div>
-      <div class="sub">Repaid</div>
-      <div class="mid" id="ap">£0</div>
-      <div class="progress">
-        <span id="apProg" style="background:var(--pink);width:0%"></span>
+    <div class="kpi aleeya kpiVertical">
+      <div class="kpiContent">
+        <h3>Aleeya</h3>
+        <div class="sub">Outstanding</div>
+        <div class="mid remaining" id="ar">£0</div>
+        <div class="sub">Repaid</div>
+        <div class="mid" id="ap">£0</div>
+      </div>
+
+      <div class="kpiBar right">
+        <span id="apProg"></span>
       </div>
     </div>
   </div>
@@ -479,8 +524,8 @@ function stripRefundPairs(rows){
   const aleeyaPct = aSpend ? (aPaid / aSpend) * 100 : 0;
   const yousefPct = ySpend ? ((yPaidGross - aPaid) / ySpend) * 100 : 0;
 
-  $("apProg").style.width = `${Math.min(100, aleeyaPct)}%`;
-  $("ypProg").style.width = `${Math.min(100, yousefPct)}%`;
+  $("apProg").style.height = `${Math.min(100, aleeyaPct)}%`;
+  $("ypProg").style.height = `${Math.min(100, yousefPct)}%`;
 
 
   /* ---------- PIE (interactive, animated, spaced) ---------- */
