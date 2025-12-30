@@ -18,7 +18,7 @@
 
   /* Yousef – Olive Green */
   --blue:#617741;
-  --blueDark:#2b361a;
+  --blueDark:#8cb948;
 
   /* Aleeya – Baby Pastel Pink */
   --pink:#f2a7c4;
@@ -87,6 +87,13 @@ canvas{max-width:100%}
 /* KPI Headings */ 
 .kpi.yousef h3{color:var(--blue);}
 .kpi.aleeya h3{color:var(--pink);}
+.spendingCard .kpi{
+  background:none;
+  border:0;
+  box-shadow:none;
+  padding:0;
+}
+
 
 /* Pie */
 .pieWrap{position:relative}
@@ -227,6 +234,12 @@ tr.repaid {
   transition:width .4s ease;
 }
 
+.divider{
+  height:1px;
+  background:rgba(255,255,255,.08);
+  margin:16px 0;
+}
+
 
 </style>
 </head>
@@ -234,43 +247,47 @@ tr.repaid {
 <body>
 <div class="wrap">
 
-<!-- PIE -->
-<div class="card">
+<!-- SPENDING + KPIs -->
+<div class="card spendingCard">
   <h2>Spending</h2>
+
   <div class="pieWrap">
-    <canvas id="pie" height="220"></canvas>
+    <canvas id="pie" height="200"></canvas>
     <div class="pieCenter">
       <div id="pcTitle">Total</div>
       <div id="pcTotal">£0</div>
       <div class="sub" id="pcTx">0 transactions</div>
     </div>
   </div>
-</div>
 
-<!-- KPIs -->
-<div class="kpiGrid">
-  <div class="card kpi yousef">
-    <h3>Yousef</h3>
-    <div class="sub">Outstanding</div>
-    <div class="mid remaining" id="yr">£0</div>
-    <div class="sub">Repaid</div>
-    <div class="mid" id="yp">£0</div>
-    <div class="progress">
-      <span id="ypProg" style="background:var(--blue);width:0%"></span>
-    </div>
-  </div>
-  <div class="card kpi aleeya">
-    <h3>Aleeya</h3>
-    <div class="sub">Outstanding</div>
-    <div class="mid remaining" id="ar">£0</div>
-    <div class="sub">Repaid</div>
-    <div class="mid" id="ap">£0</div>
-    <div class="progress">
-      <span id="apProg" style="background:var(--pink);width:0%"></span>
+  <div class="divider"></div>
+
+  <div class="kpiGrid">
+    <div class="kpi yousef">
+      <h3>Yousef</h3>
+      <div class="sub">Outstanding</div>
+      <div class="mid remaining" id="yr">£0</div>
+      <div class="sub">Repaid</div>
+      <div class="mid" id="yp">£0</div>
+      <div class="progress">
+        <span id="ypProg" style="background:var(--blue);width:0%"></span>
+      </div>
     </div>
 
+    <div class="kpi aleeya">
+      <h3>Aleeya</h3>
+      <div class="sub">Outstanding</div>
+      <div class="mid remaining" id="ar">£0</div>
+      <div class="sub">Repaid</div>
+      <div class="mid" id="ap">£0</div>
+      <div class="progress">
+        <span id="apProg" style="background:var(--pink);width:0%"></span>
+      </div>
+    </div>
   </div>
 </div>
+
+
 
 <!-- MONTHLY -->
 <div class="card" id="monthCard">
