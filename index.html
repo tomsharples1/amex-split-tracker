@@ -67,8 +67,16 @@ canvas{max-width:100%}
 
 /* Table */
 .tableHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+
+/*
 .segment{display:inline-flex;border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .segBtn{background:none;border:0;color:var(--muted);padding:6px 10px;font-size:12px;cursor:pointer}
+*/ 
+
+/* New Segments */ 
+.segment{display:flex; width:100%;}
+.segBtn{flex:1; padding:8px 0; text-align:center; font-size:12px;}
+
 .segBtn.active{background:rgba(255,255,255,.08);color:var(--text)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
@@ -177,11 +185,12 @@ tr.repaid {
 <!-- TABLE -->
 <div class="card">
   <div class="tableHeader">
-    <h2>Aleeya Transactions</h2>
+    <h2>Transactions</h2>
     <div class="segment">
       <button class="segBtn active" id="fltAll">All</button>
       <button class="segBtn" id="fltSpent">Spent</button>
       <button class="segBtn" id="fltPaid">Paid</button>
+      <button class="segBtn" id="fltDue">Due</button>
     </div>
   </div>
   <table>
@@ -265,259 +274,4 @@ function stripRefundPairs(rows){
     const amt=Math.abs(+r.Amount||0); if(!amt) return;
     aPaid+=amt; ensure(monthKey(d)).ap+=amt;
     /* events.push({d,type:"paid",desc:"Repayment",amt:-amt}); */ 
-    events.push({
-      d,
-      type:"paid",
-      desc:"Repayment",
-      amt:-amt,
-      repaid:true
-    });
-  });
-
-  const aleeyaPaymentAmounts = new Set(
-    payments
-      .map(r => Math.round(Math.abs(+r.Amount || 0) * 100))
-      .filter(Boolean)
-  );
-
-
-  activity.forEach(r=>{
-    const d=parseDate(r.Date); if(!d) return;
-    const amt=+r.Amount||0; if(!amt) return;
-    const m=monthKey(d),b=ensure(m);
-    const isA=/ALEEYA/i.test(r["Card Member"]||"");
-    if(amt>0){
-      if(isA){aSpend+=amt;aTx++;b.as+=amt;
-        /* events.push({d,type:"spent",desc:r.Description,amt})} */ 
-        events.push({
-          d,
-          type:"spent",
-          desc:r.Description,
-          amt,
-          paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
-        })}
-      else{ySpend+=amt;yTx++;b.ys+=amt}
-    }else if(!isA&&/PAYMENT/i.test(r.Description)){
-      yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
-    }
-  });
-
-  $("ys").textContent=GBP(ySpend);
-  $("as").textContent=GBP(aSpend);
-  $("yp").textContent=GBP(Math.max(0,yPaidGross-aPaid));
-  $("yr").textContent=GBP(ySpend-(yPaidGross-aPaid));
-  $("ap").textContent=GBP(aPaid);
-  $("ar").textContent=GBP(aSpend-aPaid);
-
-  /* ---------- PIE (interactive, animated, spaced) ---------- */
-  const pie = new Chart($("pie"),{
-    type:"doughnut",
-    data:{
-      labels:["Yousef","Aleeya"],
-      datasets:[{
-        data:[ySpend,aSpend],
-        backgroundColor:[cssVar("--blue"), cssVar("--pink")],
-        borderWidth:0,          // no white border
-        cutout:"68%",
-        spacing:6,             // gap between slices
-        borderRadius:12,       // rounded slice edges
-        offset:[0,0]
-      }]
-    },
-    options:{
-      plugins:{
-        legend:{display:false},
-        tooltip:{enabled:false}
-      },
-      animation:{
-        duration:320,
-        easing:"easeOutCubic"   // subtle smooth expansion
-      },
-      onClick:(_,els)=>{
-        const ds = pie.data.datasets[0];
-
-        // Reset (tap outside slices)
-        if(!els.length){
-          ds.offset = [0,0];
-          $("pcTitle").textContent = "Total";
-          $("pcTotal").textContent = GBP(ySpend + aSpend);
-          $("pcTx").textContent = `${yTx + aTx} transactions`;
-          pie.update();
-          return;
-        }
-
-        // Expand selected slice
-        const i = els[0].index;
-        ds.offset = [0,0];
-        ds.offset[i] = 22;   // expansion amount (keeps centre aligned)
-
-        if(i === 0){
-          $("pcTitle").textContent = "Yousef";
-          $("pcTotal").textContent = GBP(ySpend);
-          $("pcTx").textContent = `${yTx} transactions`;
-        } else {
-          $("pcTitle").textContent = "Aleeya";
-          $("pcTotal").textContent = GBP(aSpend);
-          $("pcTx").textContent = `${aTx} transactions`;
-        }
-
-        pie.update();
-      }
-    }
-  });
-
-  // Default centre state
-  $("pcTotal").textContent = GBP(ySpend + aSpend);
-  $("pcTx").textContent = `${yTx + aTx} transactions`;
-
-  /* ---------- BAR ---------- */
-  function updateBarAction(i){
-    const action = $("barAction");
-    const m = monthly[months[idx]];
-
-    // Reset base colours first
-    bar.data.datasets[0].backgroundColor = [...barBaseColors];
-
-    // Fade non-selected bars
-    bar.data.datasets[0].backgroundColor =
-      bar.data.datasets[0].backgroundColor.map((c,ci)=>
-        ci===i ? c : fade(c)
-      );
-
-    let label = "";
-    let cta = "";
-
-    if(i === 0) label = "Yousef spent";
-    if(i === 1) label = "Yousef paid";
-
-    if(i === 2){
-      label = "Spent this month";
-      const remaining = Math.max(0, m.as - m.ap);
-      cta = remaining > 0
-        ? `Repay ${GBP(remaining)} to settle this month`
-        : "This month is settled";
-    }
-
-    if(i === 3){
-      label = "Paid this month";
-      const remaining = Math.max(0, m.as - m.ap);
-      cta = remaining > 0
-        ? `${GBP(remaining)} still outstanding this month`
-        : "This month is settled";
-    }
-
-    const amount = GBP(bar.data.datasets[0].data[i]);
-
-    action.innerHTML = `
-      <div class="hint">${label}</div>
-      <strong>${amount}</strong>
-      ${cta ? `<div class="cta">${cta}</div>` : ""}
-    `;
-    action.hidden = false;
-
-    bar.update();
-  }
-
-
-  const months=Object.keys(monthly).sort();
-  let idx=months.length-1;
-  let selectedBarIndex = null;
-  const bar=new Chart($("bar"),{
-    type:"bar",
-    data:{labels:["Spent","Paid","Spent","Paid"],datasets:[{
-      data:[],
-      backgroundColor:[
-        cssVar("--blue"),
-        cssVar("--blueDark"),
-        cssVar("--pink"),
-        cssVar("--pinkDark")
-      ],
-      borderRadius:8
-    }]},
-    options:{
-      plugins:{
-        legend:{display:false},
-        tooltip:{enabled:false}
-      }, 
-
-      onClick:(evt, els)=>{
-        const action = $("barAction");
-
-        // Click outside → reset
-        if(!els.length){
-          selectedBarIndex = null;
-          bar.data.datasets[0].backgroundColor = [...barBaseColors];
-          action.hidden = true;
-          bar.update();
-          return;
-        }
-
-        selectedBarIndex = els[0].index;
-        updateBarAction(selectedBarIndex);
-      }
-
-      }
-  });
-
-  const barBaseColors = [
-    cssVar("--blue"),
-    cssVar("--blueDark"),
-    cssVar("--pink"),
-    cssVar("--pinkDark")
-  ];
-
-  function renderMonth(){
-    const m=monthly[months[idx]];
-    bar.data.datasets[0].data=[m.ys,Math.max(0,m.ypg-m.ap),m.as,m.ap];
-    bar.update();
-    $("monthLabel").textContent=monthPretty(months[idx]);
-  }
-  renderMonth();
-
-  /* Swipe: RIGHT = previous, LEFT = next */
-  let startX=0;
-  $("monthCard").ontouchstart=e=>startX=e.touches[0].clientX;
-  $("monthCard").ontouchend=e=>{
-  const dx=e.changedTouches[0].clientX-startX;
-    if(dx>40 && idx>0) idx--;
-    if(dx<-40 && idx<months.length-1) idx++;
-    renderMonth();
-
-    if(selectedBarIndex !== null){
-      updateBarAction(selectedBarIndex);
-    }
-  };
- 
-
-  /* ---------- TABLE ---------- */
-  let filter="all";
-  function setActive(btn){
-    ["fltAll","fltSpent","fltPaid"].forEach(id=>$(id).classList.remove("active"));
-    btn.classList.add("active");
-  }
-  function renderTable(){
-    $("aLedger").innerHTML = events
-      .filter(e=>filter==="all"||e.type===filter)
-      .sort((a,b)=>b.d-a.d)   // newest first
-      /* .map(e=>`<tr> */ 
-      .map(e=>`<tr class="${
-          e.type==="spent" && e.paidOff ? "paidOff" :
-          e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
-          ""
-        }">
-        <td>${e.d.toLocaleDateString("en-GB")}</td>
-        <td><span class="badge">${e.type}</span></td>
-        <td>${e.desc}</td>
-        <td>${GBP(Math.abs(e.amt))}</td>
-      </tr>`).join("");
-  }
-  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);renderTable()};
-  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);renderTable()};
-  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);renderTable()};
-  renderTable();
-
-})();
-</script>
-
-</body>
-</html>
+    event
