@@ -1,0 +1,17 @@
+{
+  "name": "Amex Split Tracker",
+  "short_name": "Split Tracker",
+  "description": "Track shared spending, repayments and outstanding balances.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "icons": [
+    {
+      "src": "icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
