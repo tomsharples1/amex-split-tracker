@@ -236,9 +236,10 @@ tr.repaid {
       <div id="pcTotal">£0</div>
       <div class="sub" id="pcTx">0 transactions</div>
     </div>
-  </div>
+  <!-- </div>
   <div class="row"><div><span class="dot" style="background:var(--blue)"></span>Yousef</div><div id="ys">£0</div></div>
   <div class="row"><div><span class="dot" style="background:var(--pink)"></span>Aleeya</div><div id="as">£0</div></div>
+-->
 </div>
 
 <!-- KPIs -->
@@ -483,7 +484,7 @@ function stripRefundPairs(rows){
       },
       animation:{
         duration:260,
-        easing:"easeOutBack"   // subtle smooth expansion
+        easing:"easeOutCubic"   // subtle smooth expansion
       },
       onClick:(_,els)=>{
         const ds = pie.data.datasets[0];
