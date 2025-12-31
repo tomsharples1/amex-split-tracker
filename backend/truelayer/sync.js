@@ -10,9 +10,18 @@ const db = new sqlite3.Database("./db/app.db");
 
   const cards = await fetchCards(db);
 
+  if (!cards.length) {
+    console.warn("No cards returned from TrueLayer");
+    process.exit(0);
+  }
+
   for (const card of cards) {
-    console.log(`Fetching transactions for ${card.display_name}`);
+    console.log(`Fetching transactions for ${card.display_name ?? card.account_id}`);
+
     const txs = await fetchCardTransactions(db, card.account_id);
+
+    console.log(`   ↳ ${txs.length} transactions`);
+
     insertTransactions(db, card.account_id, txs);
   }
 
