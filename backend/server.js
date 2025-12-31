@@ -5,6 +5,8 @@ import sqlite3 from "sqlite3";
 
 import truelayerAuth from "./truelayer/auth.js";
 
+import { fetchCards } from "./truelayer/fetchCards.js";
+
 const app = express();
 const PORT = 3001;
 
@@ -22,6 +24,15 @@ app.use("/truelayer", truelayerAuth);
 // Health check (optional but useful)
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/debug/cards", async (req, res) => {
+  try {
+    const cards = await fetchCards(req.app.locals.db);
+    res.json(cards);
+  } catch (e) {
+    res.status(500).json({ error: e.toString() });
+  }
 });
 
 // Start server

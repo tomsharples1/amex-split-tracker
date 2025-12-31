@@ -60,21 +60,3 @@ router.get("/callback", async (req, res) => {
   const token = await tokenRes.json();
 
   if (!token.refresh_token) {
-    console.error("Token exchange failed:", token);
-    return res.status(500).send("No refresh token returned");
-  }
-
-  req.app.locals.db.run(
-    `
-    INSERT OR REPLACE INTO connections
-      (provider, refresh_token, status)
-    VALUES
-      ('truelayer', ?, 'connected')
-    `,
-    [token.refresh_token]
-  );
-
-  res.send("TrueLayer LIVE connected. You can close this tab.");
-});
-
-export default router;
