@@ -25,7 +25,7 @@ router.get("/callback", async (req, res) => {
   }
 
   const tokenRes = await fetch(
-    "https://auth.truelayer.com/connect/token",
+    "https://auth.truelayer-sandbox.com/connect/token",
     {
       method: "POST",
       headers: {
