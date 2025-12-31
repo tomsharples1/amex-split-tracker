@@ -13,5 +13,9 @@ export async function fetchCards(db) {
   );
 
   const data = await res.json();
-  return data.results;
+
+  console.log("🔍 Raw /cards response:", JSON.stringify(data, null, 2));
+
+  // Defensive return
+  return Array.isArray(data.results) ? data.results : [];
 }
