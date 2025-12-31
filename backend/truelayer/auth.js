@@ -18,9 +18,7 @@ router.get("/connect", (req, res) => {
     providers: "uk-cs-mock uk-ob-all uk-oauth-all"
   });
 
-  const authUrl = `https://auth.truelayer-sandbox.com/?${params.toString()}`;
-  console.log("TrueLayer auth URL:", authUrl);
-
+  const authUrl = `https://auth.truelayer.com/?${params.toString()}`;
   res.redirect(authUrl);
 });
 
@@ -32,7 +30,7 @@ router.get("/callback", async (req, res) => {
   }
 
   const tokenRes = await fetch(
-    "https://auth.truelayer-sandbox.com/connect/token",
+    "https://auth.truelayer.com/connect/token",
     {
       method: "POST",
       headers: {
