@@ -58,4 +58,4 @@ router.get("/callback", async (req, res) => {
   res.send("TrueLayer connected. You can close this tab.");
 });
 
-export default router;
+export

@@ -7,9 +7,10 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^5.2.1",
     "cors": "^2.8.5",
-    "sqlite3": "^5.1.7",
-    "papaparse": "^5.5.3"
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "papaparse": "^5.5.3",
+    "sqlite3": "^5.1.7"
   }
 }
