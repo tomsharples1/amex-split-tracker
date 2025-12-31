@@ -7,16 +7,17 @@ router.get("/connect", (req, res) => {
     response_type: "code",
     client_id: process.env.TRUELAYER_CLIENT_ID,
     redirect_uri: process.env.TRUELAYER_REDIRECT_URI,
-    scope: "cards transactions balance offline_access", 
+    scope: "cards transactions balance offline_access",
+    resource: "data",
     state: "local-dev"
   });
 
   const authUrl = `https://auth.truelayer-sandbox.com/?${params.toString()}`;
-
   console.log("TrueLayer auth URL:", authUrl);
 
   res.redirect(authUrl);
 });
+
 
 
 router.get("/callback", async (req, res) => {
