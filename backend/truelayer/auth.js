@@ -8,7 +8,7 @@ router.get("/connect", (req, res) => {
     client_id: process.env.TRUELAYER_CLIENT_ID,
     redirect_uri: process.env.TRUELAYER_REDIRECT_URI,
     scope: "cards transactions balance offline_access",
-    resource: "https://api.truelayer-sandbox.com/data/v1",
+    audience: "https://api.truelayer-sandbox.com",
     state: "local-dev"
   });
 
@@ -17,8 +17,6 @@ router.get("/connect", (req, res) => {
 
   res.redirect(authUrl);
 });
-
-
 
 
 router.get("/callback", async (req, res) => {
@@ -55,11 +53,4 @@ router.get("/callback", async (req, res) => {
   req.app.locals.db.run(
     `INSERT OR REPLACE INTO connections
      (provider, refresh_token, status)
-     VALUES ('truelayer', ?, 'connected')`,
-    [token.refresh_token]
-  );
-
-  res.send("TrueLayer connected. You can close this tab.");
-});
-
-export default router;
+     VALUES ('truelayer', ?, 'con
