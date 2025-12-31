@@ -8,7 +8,7 @@ router.get("/connect", (req, res) => {
     client_id: process.env.TRUELAYER_CLIENT_ID,
     redirect_uri: process.env.TRUELAYER_REDIRECT_URI,
     scope: "cards transactions balance offline_access",
-    resource: "https://api.truelayer-sandbox.com/data",
+    resource: "https://api.truelayer-sandbox.com/data/v1",
     state: "local-dev"
   });
 
