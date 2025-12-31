@@ -14,12 +14,4 @@ export async function fetchCardTransactions(db, cardId) {
   );
 
   if (!res.ok) {
-    const text = await res.text();
-    console.error("/transactions HTTP error:", text);
-    return [];
-  }
-
-  const data = await res.json();
-  
-  return Array.isArray(data.results) ? data.results : [];
-}
+    const text = 
