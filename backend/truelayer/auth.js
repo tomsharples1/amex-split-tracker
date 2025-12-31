@@ -12,8 +12,9 @@ router.get("/connect", (req, res) => {
   });
 
   res.redirect(
-    `https://auth.truelayer.com/?${params.toString()}`
-  );
+  `https://auth.truelayer-sandbox.com/?${params.toString()}`
+    );
+
 });
 
 router.get("/callback", async (req, res) => {
