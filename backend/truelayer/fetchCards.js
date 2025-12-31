@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { getAccessToken } from "./client.js";
 
 export async function fetchCards(db) {
@@ -12,10 +13,12 @@ export async function fetchCards(db) {
     }
   );
 
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`TrueLayer /cards failed: ${error}`);
+  }
+
   const data = await res.json();
 
-  console.log("🔍 Raw /cards response:", JSON.stringify(data, null, 2));
-
-  // Defensive return
   return Array.isArray(data.results) ? data.results : [];
 }

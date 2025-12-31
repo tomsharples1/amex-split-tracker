@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 export async function getAccessToken(db) {
   return new Promise((resolve, reject) => {
     db.get(
@@ -6,6 +8,14 @@ export async function getAccessToken(db) {
         if (err || !row) {
           return reject("No refresh token found");
         }
+
+        // 🔍 DEBUG LOGS (temporary)
+        console.log("🌍 Client ID:", process.env.TRUELAYER_CLIENT_ID);
+        console.log(
+          "🔑 Refresh token prefix:",
+          row.refresh_token.slice(0, 8),
+          `(${row.refresh_token.length} chars)`
+        );
 
         try {
           const res = await fetch(
@@ -28,6 +38,15 @@ export async function getAccessToken(db) {
           );
 
           const data = await res.json();
+
+          // 🔍 DEBUG LOG
+          console.log("🎟️ Token response keys:", Object.keys(data));
+
+          if (!data.access_token) {
+            console.error("❌ Token refresh failed:", data);
+            return reject("No access token returned");
+          }
+
           resolve(data.access_token);
         } catch (e) {
           reject(e);
