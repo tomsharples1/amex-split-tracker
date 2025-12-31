@@ -7,9 +7,15 @@ router.get("/connect", (req, res) => {
     response_type: "code",
     client_id: process.env.TRUELAYER_CLIENT_ID,
     redirect_uri: process.env.TRUELAYER_REDIRECT_URI,
-    scope: "cards transactions balance offline_access",
-    audience: "https://api.truelayer-sandbox.com",
-    state: "local-dev"
+    scope: [
+      "info",
+      "accounts",
+      "balance",
+      "cards",
+      "transactions",
+      "offline_access"
+    ].join(" "),
+    providers: "uk-cs-mock uk-ob-all uk-oauth-all"
   });
 
   const authUrl = `https://auth.truelayer-sandbox.com/?${params.toString()}`;
@@ -17,7 +23,6 @@ router.get("/connect", (req, res) => {
 
   res.redirect(authUrl);
 });
-
 
 router.get("/callback", async (req, res) => {
   const { code } = req.query;
@@ -53,4 +58,11 @@ router.get("/callback", async (req, res) => {
   req.app.locals.db.run(
     `INSERT OR REPLACE INTO connections
      (provider, refresh_token, status)
-     VALUES ('truelayer', ?, 'con
+     VALUES ('truelayer', ?, 'connected')`,
+    [token.refresh_token]
+  );
+
+  res.send("TrueLayer connected. You can close this tab.");
+});
+
+export default router;
