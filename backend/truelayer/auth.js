@@ -2,6 +2,9 @@ import express from "express";
 
 const router = express.Router();
 
+/**
+ * STEP 1: Redirect user to TrueLayer consent
+ */
 router.get("/connect", (req, res) => {
   const params = new URLSearchParams({
     response_type: "code",
@@ -14,14 +17,19 @@ router.get("/connect", (req, res) => {
       "cards",
       "transactions",
       "offline_access"
-    ].join(" "),
-    providers: "uk-cs-mock uk-ob-all uk-oauth-all"
+    ].join(" ")
+    // NOTE: no providers param for LIVE
   });
 
   const authUrl = `https://auth.truelayer.com/?${params.toString()}`;
+  console.log("TrueLayer LIVE auth URL:", authUrl);
+
   res.redirect(authUrl);
 });
 
+/**
+ * STEP 2: Handle callback + exchange code for tokens
+ */
 router.get("/callback", async (req, res) => {
   const { code } = req.query;
 
@@ -34,14 +42,17 @@ router.get("/callback", async (req, res) => {
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization":
+          "Basic " +
+          Buffer.from(
+            `${process.env.TRUELAYER_CLIENT_ID}:${process.env.TRUELAYER_CLIENT_SECRET}`
+          ).toString("base64")
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: process.env.TRUELAYER_REDIRECT_URI,
-        client_id: process.env.TRUELAYER_CLIENT_ID,
-        client_secret: process.env.TRUELAYER_CLIENT_SECRET
+        redirect_uri: process.env.TRUELAYER_REDIRECT_URI
       })
     }
   );
@@ -49,18 +60,21 @@ router.get("/callback", async (req, res) => {
   const token = await tokenRes.json();
 
   if (!token.refresh_token) {
-    console.error(token);
+    console.error("Token exchange failed:", token);
     return res.status(500).send("No refresh token returned");
   }
 
   req.app.locals.db.run(
-    `INSERT OR REPLACE INTO connections
-     (provider, refresh_token, status)
-     VALUES ('truelayer', ?, 'connected')`,
+    `
+    INSERT OR REPLACE INTO connections
+      (provider, refresh_token, status)
+    VALUES
+      ('truelayer', ?, 'connected')
+    `,
     [token.refresh_token]
   );
 
-  res.send("TrueLayer connected. You can close this tab.");
+  res.send("TrueLayer LIVE connected. You can close this tab.");
 });
 
 export default router;
