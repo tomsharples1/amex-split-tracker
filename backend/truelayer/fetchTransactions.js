@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { getAccessToken } from "./client.js";
 
 export async function fetchCardTransactions(db, cardId) {
@@ -12,6 +13,13 @@ export async function fetchCardTransactions(db, cardId) {
     }
   );
 
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("/transactions HTTP error:", text);
+    return [];
+  }
+
   const data = await res.json();
-  return data.results;
+  
+  return Array.isArray(data.results) ? data.results : [];
 }

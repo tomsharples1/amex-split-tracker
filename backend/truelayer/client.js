@@ -9,14 +9,6 @@ export async function getAccessToken(db) {
           return reject("No refresh token found");
         }
 
-        // 🔍 DEBUG LOGS (temporary)
-        console.log("🌍 Client ID:", process.env.TRUELAYER_CLIENT_ID);
-        console.log(
-          "🔑 Refresh token prefix:",
-          row.refresh_token.slice(0, 8),
-          `(${row.refresh_token.length} chars)`
-        );
-
         try {
           const res = await fetch(
             "https://auth.truelayer.com/connect/token",
