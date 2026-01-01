@@ -591,7 +591,7 @@ function stripRefundPairs(rows){
       yRunningOutstanding = Math.max(0, yRunningOutstanding - amt);
 
       yEvents.push({
-        d: parseDate(p.date),
+        d: parseDate(r.date),
         type: "paid",
         desc: "Repayment",
         amt: -amt,
