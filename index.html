@@ -529,10 +529,6 @@ function stripRefundPairs(rows){
     r => !/ALEEYA/i.test(r.card_member || "")
   );
 
-  const aleeyaActivity = activity.filter(
-    r => /ALEEYA/i.test(r.card_member || "")
-  );
-
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
@@ -643,7 +639,7 @@ function stripRefundPairs(rows){
 
   /* Progress Bar */
   const aleeyaPct = aSpend ? (aPaid / aSpend) * 100 : 0;
-  const yousefPct = ySpend ? ((yPaidGross - aPaid) / ySpend) * 100 : 0;
+  const yousefPct = ySpend ? (yTotalRepaid / ySpend) * 100 : 0;
 
   $("apProg").style.height = `${Math.min(100, aleeyaPct)}%`;
   $("ypProg").style.height = `${Math.min(100, yousefPct)}%`;
@@ -789,7 +785,7 @@ function stripRefundPairs(rows){
     }
 
     if(i === 1){
-      title = `Yousef repaid ${GBP(m.ypg - m.ap)} this month`;
+      title = `Yousef repaid ${GBP(m.ypg)} this month`;
       message = `Payments made towards this month’s balance.`;
     }
 
