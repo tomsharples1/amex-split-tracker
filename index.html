@@ -534,7 +534,7 @@ function stripRefundPairs(rows){
   );
 
 
-  let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
+  let ySpend=0,aSpend=0,yTx=0,aTx=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
   let events=[];
 
@@ -581,12 +581,11 @@ function stripRefundPairs(rows){
     });
 
   /* 2. Yousef repayments (running total, FIFO) */
-  payments
-    .filter(p => !/ALEEYA/i.test(p.description || "")) 
+  yousefActivity
+    .filter(r => /PAYMENT/i.test(r.description || "") && +r.amount < 0)
     .sort((a,b)=>parseDate(a.date)-parseDate(b.date))
-    .forEach(p=>{
-      const amt = Math.abs(+p.amount||0);
-      if(!amt) return;
+    .forEach(r=>{
+      const amt = Math.abs(+r.amount||0);
 
       yRunningRepaid += amt;
       yRunningOutstanding = Math.max(0, yRunningOutstanding - amt);
@@ -600,15 +599,15 @@ function stripRefundPairs(rows){
       });
     });
 
-    /* ---------- Mark Yousef spends as paid off (FIFO) ---------- */
-    let clearedTotal = 0;
+  /* ---------- Mark Yousef spends as paid off (FIFO) ---------- */
+  let clearedTotal = 0;
 
-    yEvents
-      .filter(e => e.type === "spent")
-      .forEach(e=>{
-        clearedTotal += e.amt;
-        e.paidOff = clearedTotal <= yRunningRepaid;
-      });
+  yEvents
+    .filter(e => e.type === "spent")
+    .forEach(e=>{
+      clearedTotal += e.amt;
+      e.paidOff = clearedTotal <= yRunningRepaid;
+    });
 
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
@@ -627,13 +626,18 @@ function stripRefundPairs(rows){
         })}
       else{ySpend+=amt;yTx++;b.ys+=amt}
     }else if(!isA&&/PAYMENT/i.test(r.description)){
-      yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
+      b.ypg+=Math.abs(amt);
     }
   });
 
 
-  $("yp").textContent = GBP(Math.max(0, yPaidGross - aPaid));
-  $("yr").textContent = GBP(ySpend - (yPaidGross - aPaid));
+  /* ---------- Yousef KPIs (single source of truth) ---------- */
+  const yTotalRepaid = yRunningRepaid;
+  const yOutstanding = Math.max(0, ySpend - yTotalRepaid);
+
+  $("yp").textContent = GBP(yTotalRepaid);
+  $("yr").textContent = GBP(yOutstanding);
+
   $("ap").textContent = GBP(aPaid);
   $("ar").textContent = GBP(aSpend - aPaid);
 
