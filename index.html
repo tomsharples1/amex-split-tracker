@@ -595,15 +595,17 @@ function stripRefundPairs(rows){
       });
     });
 
-  /* ---------- Mark Yousef spends as paid off (FIFO) ---------- */
+  /* ---------- Mark Yousef spends as paid off (FIFO, capped) ---------- */
   let clearedTotal = 0;
+  const repayCap = Math.min(yRunningRepaid, ySpend);
 
   yEvents
     .filter(e => e.type === "spent")
     .forEach(e=>{
       clearedTotal += e.amt;
-      e.paidOff = clearedTotal <= yRunningRepaid;
+      e.paidOff = clearedTotal <= repayCap;
     });
+
 
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
@@ -628,7 +630,7 @@ function stripRefundPairs(rows){
 
 
   /* ---------- Yousef KPIs (single source of truth) ---------- */
-  const yTotalRepaid = yRunningRepaid;
+  const yTotalRepaid = Math.min(yRunningRepaid, ySpend);
   const yOutstanding = Math.max(0, ySpend - yTotalRepaid);
 
   $("yp").textContent = GBP(yTotalRepaid);
