@@ -630,8 +630,26 @@ function stripRefundPairs(rows){
 
 
   /* ---------- Yousef KPIs (single source of truth) ---------- */
-  const yTotalRepaid = Math.min(yRunningRepaid, ySpend);
-  const yOutstanding = Math.max(0, ySpend - yTotalRepaid);
+  // const yTotalRepaid = Math.min(yRunningRepaid, ySpend);
+  // const yOutstanding = Math.max(0, ySpend - yTotalRepaid);
+
+  /* ---------- Yousef Outstanding (time-aware) ---------- */
+  let runningOutstanding = 0;
+
+  yEvents
+    .sort((a,b)=>a.d - b.d)
+    .forEach(e=>{
+      if(e.type === "spent"){
+        runningOutstanding += e.amt;
+      }
+      if(e.type === "paid"){
+        runningOutstanding = Math.max(0, runningOutstanding - Math.abs(e.amt));
+      }
+    });
+
+  const yOutstanding = runningOutstanding;
+  const yTotalRepaid = ySpend - yOutstanding;
+
 
   $("yp").textContent = GBP(yTotalRepaid);
   $("yr").textContent = GBP(yOutstanding);
