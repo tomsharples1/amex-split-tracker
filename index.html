@@ -367,6 +367,11 @@ tr.repaid {
     <h2>Transactions</h2>
   </div>
 
+  <div class="segment" style="margin-bottom:12px">
+    <button class="segBtn active" id="viewAleeya">Aleeya</button>
+    <button class="segBtn" id="viewYousef">Yousef</button>
+  </div>
+
   <div class="segment segment-full">
     <button class="segBtn segWide active" id="fltDue">Outstanding</button>
     <button class="segBtn" id="fltAll">All</button>
@@ -379,6 +384,7 @@ tr.repaid {
       <tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr>
     </thead>
     <tbody id="aLedger"></tbody>
+    <tbody id="yLedger" hidden></tbody>
   </table>
 </div>
 
@@ -519,6 +525,15 @@ function stripRefundPairs(rows){
 
   const activity = stripRefundPairs(activityRaw);
 
+  const yousefActivity = activity.filter(
+    r => !/ALEEYA/i.test(r.card_member || "")
+  );
+
+  const aleeyaActivity = activity.filter(
+    r => /ALEEYA/i.test(r.card_member || "")
+  );
+
+
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
   let events=[];
@@ -542,6 +557,58 @@ function stripRefundPairs(rows){
       .filter(Boolean)
   );
 
+  /* ---------- Yousef running-balance ledger ---------- */
+  let yRunningOutstanding = 0;
+  let yRunningRepaid = 0;
+
+  const yEvents = [];
+
+  /* 1. Yousef spends (chronological) */
+  yousefActivity
+    .filter(r => +r.amount > 0)
+    .sort((a,b)=>parseDate(a.date)-parseDate(b.date))
+    .forEach(r=>{
+      const amt = +r.amount;
+      yRunningOutstanding += amt;
+
+      yEvents.push({
+        d: parseDate(r.date),
+        type: "spent",
+        desc: r.description,
+        amt,
+        paidOff: false
+      });
+    });
+
+  /* 2. Yousef repayments (running total, FIFO) */
+  payments
+    .filter(p => !/ALEEYA/i.test(p.description || "")) 
+    .sort((a,b)=>parseDate(a.date)-parseDate(b.date))
+    .forEach(p=>{
+      const amt = Math.abs(+p.amount||0);
+      if(!amt) return;
+
+      yRunningRepaid += amt;
+      yRunningOutstanding = Math.max(0, yRunningOutstanding - amt);
+
+      yEvents.push({
+        d: parseDate(p.date),
+        type: "paid",
+        desc: "Repayment",
+        amt: -amt,
+        repaid: true
+      });
+    });
+
+    /* ---------- Mark Yousef spends as paid off (FIFO) ---------- */
+    let clearedTotal = 0;
+
+    yEvents
+      .filter(e => e.type === "spent")
+      .forEach(e=>{
+        clearedTotal += e.amt;
+        e.paidOff = clearedTotal <= yRunningRepaid;
+      });
 
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
@@ -772,39 +839,86 @@ function stripRefundPairs(rows){
   };
  
 
-  /* ---------- TABLE ---------- */
-  let filter="due";
-  function setActive(btn){
-    ["fltAll","fltSpent","fltPaid", "fltDue"].forEach(id=>$(id).classList.remove("active"));
-    btn.classList.add("active");
-  }
-  function renderTable(){
-    $("aLedger").innerHTML = events
-      .filter(e=>{
-        if(filter === "all") return true;
-        if(filter === "spent") return e.type === "spent";
-        if(filter === "paid") return e.type === "paid";
-        if(filter === "due") return e.type === "spent" && !e.paidOff;
-      })
-      .sort((a,b)=>b.d-a.d)   // newest first
-      /* .map(e=>`<tr> */ 
-      .map(e=>`<tr class="${
-          e.type==="spent" && e.paidOff ? "paidOff" :
-          e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
-          ""
-        }">
+  /* ---------- TABLE RENDERERS ---------- */
+  let activeView = "aleeya";
+  let filter = "due";
+
+  function rowHTML(e){
+    return `
+      <tr class="${
+        e.type==="spent" && e.paidOff ? "paidOff" :
+        e.type==="paid" && e.repaid ? "repaid" : ""
+      }">
         <td>${e.d.toLocaleDateString("en-GB")}</td>
         <td><span class="badge">${displayType(e.type)}</span></td>
         <td>${e.desc}</td>
         <td>${GBP(Math.abs(e.amt))}</td>
-      </tr>`).join("");
+      </tr>`;
   }
-  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);renderTable()};
-  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);renderTable()};
-  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);renderTable()};
-  $("fltDue").onclick=()=>{filter="due"; setActive(fltDue); renderTable();};
 
-  renderTable();
+  function renderAleeyaTable(){
+    $("aLedger").innerHTML = events
+      .filter(e=>{
+        if(filter==="all") return true;
+        if(filter==="spent") return e.type==="spent";
+        if(filter==="paid") return e.type==="paid";
+        if(filter==="due") return e.type==="spent" && !e.paidOff;
+      })
+      .sort((a,b)=>b.d-a.d)
+      .map(rowHTML)
+      .join("");
+  }
+
+  function renderYousefTable(){
+    $("yLedger").innerHTML = yEvents
+      .filter(e=>{
+        if(filter==="all") return true;
+        if(filter==="spent") return e.type==="spent";
+        if(filter==="paid") return e.type==="paid";
+        if(filter==="due") return e.type==="spent" && !e.paidOff;
+      })
+      .sort((a,b)=>b.d-a.d)
+      .map(rowHTML)
+      .join("");
+  }
+
+  function rerender(){
+    activeView === "aleeya"
+      ? renderAleeyaTable()
+      : renderYousefTable();
+  }
+
+  /* ---------- Toggle + filters ---------- */
+  function setActive(btn){
+    ["fltAll","fltSpent","fltPaid","fltDue"].forEach(id=>$(id).classList.remove("active"));
+    btn.classList.add("active");
+  }
+
+  $("fltAll").onclick = ()=>{ filter="all"; setActive(fltAll); rerender(); };
+  $("fltSpent").onclick = ()=>{ filter="spent"; setActive(fltSpent); rerender(); };
+  $("fltPaid").onclick = ()=>{ filter="paid"; setActive(fltPaid); rerender(); };
+  $("fltDue").onclick = ()=>{ filter="due"; setActive(fltDue); rerender(); };
+
+  $("viewAleeya").onclick = ()=>{
+    activeView = "aleeya";
+    $("aLedger").hidden = false;
+    $("yLedger").hidden = true;
+    viewAleeya.classList.add("active");
+    viewYousef.classList.remove("active");
+    rerender();
+  };
+
+  $("viewYousef").onclick = ()=>{
+    activeView = "yousef";
+    $("aLedger").hidden = true;
+    $("yLedger").hidden = false;
+    viewYousef.classList.add("active");
+    viewAleeya.classList.remove("active");
+    rerender();
+  };
+
+  /* Initial render */
+  rerender();
 
 })();
 </script>
