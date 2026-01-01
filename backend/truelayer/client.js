@@ -32,4 +32,18 @@ export async function getAccessToken(db) {
           const data = await res.json();
 
           // 🔍 DEBUG LOG
-          console.log("🎟️ Token response keys:", Object
+          console.log("🎟️ Token response keys:", Object.keys(data));
+
+          if (!data.access_token) {
+            console.error("❌ Token refresh failed:", data);
+            return reject("No access token returned");
+          }
+
+          resolve(data.access_token);
+        } catch (e) {
+          reject(e);
+        }
+      }
+    );
+  });
+}

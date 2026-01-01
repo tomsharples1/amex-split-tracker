@@ -713,13 +713,19 @@ function stripRefundPairs(rows){
 
     // Yousef
     if(i === 0){
+      const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
       title = `Yousef spent ${GBP(m.ys)} this month`;
-      message = `This is Yousef’s share for ${monthPretty(months[idx])}.`;
+      message = remaining > 0
+        ? `Next: Repay ${GBP(remaining)} to settle this month`
+        : `This month is fully settled`;
     }
 
     if(i === 1){
+      const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
       title = `Yousef repaid ${GBP(m.ypg - m.ap)} this month`;
-      message = `Payments made towards this month’s balance.`;
+      message = remaining > 0
+        ? `${GBP(remaining)} still outstanding`
+        : `This month is fully settled`;
     }
 
     // Aleeya
