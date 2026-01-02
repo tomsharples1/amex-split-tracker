@@ -802,6 +802,11 @@ function stripRefundPairs(rows){
     $("selectedTotal").textContent = GBP(total);
   }
 
+  function resetSelection() {
+    selectedRows.clear();
+    updateSelectedKPI();
+  }
+
   /* ---------- TABLE ---------- */
   let filter="due";
   function setActive(btn){
@@ -850,15 +855,15 @@ function stripRefundPairs(rows){
         }
 
         updateSelectedKPI();
-        renderTable(); // re-render so activeRow class updates
+        renderTable();
       };
     });
   }
 
-  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);renderTable()};
-  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);renderTable()};
-  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);renderTable()};
-  $("fltDue").onclick=()=>{filter="due"; setActive(fltDue); renderTable();};
+  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);resetSelection();renderTable()};
+  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);resetSelection();renderTable()};
+  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);resetSelection();renderTable()};
+  $("fltDue").onclick=()=>{filter="due"; setActive(fltDue);resetSelection();renderTable();};
 
   renderTable();
   updateSelectedKPI();
