@@ -724,68 +724,38 @@ function stripRefundPairs(rows){
     let title = "";
     let message = "";
 
-    // ----- EMPTY STATES -----
-
-    // Yousef spent
-    if (i === 0 && m.ys === 0) {
-      title = "Yousef didn’t spend anything this month";
-      message = "No action needed";
+    // Yousef
+    if(i === 0){
+      const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
+      title = `Yousef spent ${GBP(m.ys)} this month`;
+      message = remaining > 0
+        ? `Next: Repay ${GBP(remaining)} to settle this month`
+        : `This month is fully settled`;
     }
 
-    // Yousef repaid
-    else if (i === 1 && (m.ypg - m.ap) === 0) {
-      title = "Yousef didn’t make any repayments this month";
-      message = "No action needed";
+    if(i === 1){
+      const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
+      title = `Yousef repaid ${GBP(m.ypg - m.ap)} this month`;
+      message = remaining > 0
+        ? `${GBP(remaining)} still outstanding`
+        : `This month is fully settled`;
     }
 
-    // Aleeya spent
-    else if (i === 2 && m.as === 0) {
-      title = "Aleeya didn’t spend anything this month";
-      message = "No action needed";
+    // Aleeya
+    if(i === 2){
+      const remaining = Math.max(0, m.as - m.ap);
+      title = `Aleeya spent ${GBP(m.as)} this month`;
+      message = remaining > 0
+        ? `Next: Repay ${GBP(remaining)} to settle this month`
+        : `This month is fully settled`;
     }
 
-    // Aleeya repaid
-    else if (i === 3 && m.ap === 0) {
-      title = "Aleeya didn’t make any repayments this month";
-      message = "No action needed";
-    }
-
-    // ----- NORMAL STATES -----
-
-    else {
-      // Yousef
-      if(i === 0){
-        const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
-        title = `Yousef spent ${GBP(m.ys)} this month`;
-        message = remaining > 0
-          ? `Next: Repay ${GBP(remaining)} to settle this month`
-          : `This month is fully settled`;
-      }
-
-      if(i === 1){
-        const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
-        title = `Yousef repaid ${GBP(m.ypg - m.ap)} this month`;
-        message = remaining > 0
-          ? `${GBP(remaining)} still outstanding`
-          : `This month is fully settled`;
-      }
-
-      // Aleeya
-      if(i === 2){
-        const remaining = Math.max(0, m.as - m.ap);
-        title = `Aleeya spent ${GBP(m.as)} this month`;
-        message = remaining > 0
-          ? `Next: Repay ${GBP(remaining)} to settle this month`
-          : `This month is fully settled`;
-      }
-
-      if(i === 3){
-        const remaining = Math.max(0, m.as - m.ap);
-        title = `Aleeya repaid ${GBP(m.ap)} this month`;
-        message = remaining > 0
-          ? `${GBP(remaining)} still outstanding`
-          : `This month is fully settled`;
-      }
+    if(i === 3){
+      const remaining = Math.max(0, m.as - m.ap);
+      title = `Aleeya repaid ${GBP(m.ap)} this month`;
+      message = remaining > 0
+        ? `${GBP(remaining)} still outstanding`
+        : `This month is fully settled`;
     }
 
     action.innerHTML = `
@@ -796,6 +766,7 @@ function stripRefundPairs(rows){
 
     bar.update();
   }
+
 
   function renderMonth(){
     const m=monthly[months[idx]];
