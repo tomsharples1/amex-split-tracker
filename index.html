@@ -288,6 +288,11 @@ tr.repaid {
   margin:16px 0;
 }
 
+tr.activeRow {
+  background: rgba(255,255,255,.08);
+}
+
+
 
 </style>
 </head>
@@ -365,6 +370,11 @@ tr.repaid {
 <div class="card">
   <div class="tableHeader">
     <h2>Transactions</h2>
+
+    <div class="sub">
+      Selected total:
+      <strong id="selectedTotal">£0</strong>
+    </div>
   </div>
 
   <div class="segment segment-full">
@@ -521,18 +531,21 @@ function stripRefundPairs(rows){
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
+
   let events=[];
+  let eventId = 0;
 
   payments.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
     const amt=Math.abs(+r.amount||0); if(!amt) return;
     aPaid+=amt; ensure(monthKey(d)).ap+=amt;
     events.push({
+      id: eventId++,
       d,
-      type:"paid",
-      desc:"Repayment",
-      amt:-amt,
-      repaid:true
+      type: "paid",
+      desc: "Repayment",
+      amt: -amt,
+      repaid: true
     });
   });
 
@@ -550,8 +563,8 @@ function stripRefundPairs(rows){
     const isA=/ALEEYA/i.test(r.card_member||"");
     if(amt>0){
       if(isA){aSpend+=amt;aTx++;b.as+=amt;
-        /* events.push({d,type:"spent",desc:r.description,amt})} */ 
         events.push({
+          id: eventId++,
           d,
           type:"spent",
           desc:r.description,
@@ -778,12 +791,24 @@ function stripRefundPairs(rows){
   };
  
 
+  // Selected Rows for Table 
+  const selectedRows = new Set();
+
+  function updateSelectedKPI() {
+    const total = events
+      .filter(e => selectedRows.has(e.id))
+      .reduce((sum, e) => sum + Math.abs(e.amt), 0);
+
+    $("selectedTotal").textContent = GBP(total);
+  }
+
   /* ---------- TABLE ---------- */
   let filter="due";
   function setActive(btn){
     ["fltAll","fltSpent","fltPaid", "fltDue"].forEach(id=>$(id).classList.remove("active"));
     btn.classList.add("active");
   }
+
   function renderTable(){
     $("aLedger").innerHTML = events
       .filter(e=>{
@@ -792,25 +817,51 @@ function stripRefundPairs(rows){
         if(filter === "paid") return e.type === "paid";
         if(filter === "due") return e.type === "spent" && !e.paidOff;
       })
-      .sort((a,b)=>b.d-a.d)   // newest first
-      /* .map(e=>`<tr> */ 
-      .map(e=>`<tr class="${
-          e.type==="spent" && e.paidOff ? "paidOff" :
-          e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
-          ""
-        }">
-        <td>${e.d.toLocaleDateString("en-GB")}</td>
-        <td><span class="badge">${displayType(e.type)}</span></td>
-        <td>${e.desc}</td>
-        <td>${GBP(Math.abs(e.amt))}</td>
-      </tr>`).join("");
+      .sort((a,b)=>b.d-a.d)
+      .map(e => `
+        <tr
+          data-id="${e.id}"
+          class="
+            ${selectedRows.has(e.id) ? "activeRow" : ""}
+            ${
+              e.type==="spent" && e.paidOff ? "paidOff" :
+              e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
+              ""
+            }
+          "
+        >
+          <td>${e.d.toLocaleDateString("en-GB")}</td>
+          <td><span class="badge">${displayType(e.type)}</span></td>
+          <td>${e.desc}</td>
+          <td>${GBP(Math.abs(e.amt))}</td>
+        </tr>
+      `)
+      .join("");
+
+    // 👇👇 ADD THIS BLOCK
+    document.querySelectorAll("#aLedger tr").forEach(row => {
+      row.onclick = () => {
+        const id = Number(row.dataset.id);
+
+        if (selectedRows.has(id)) {
+          selectedRows.delete(id);
+        } else {
+          selectedRows.add(id);
+        }
+
+        updateSelectedKPI();
+        renderTable(); // re-render so activeRow class updates
+      };
+    });
   }
+
   $("fltAll").onclick=()=>{filter="all";setActive(fltAll);renderTable()};
   $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);renderTable()};
   $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);renderTable()};
   $("fltDue").onclick=()=>{filter="due"; setActive(fltDue); renderTable();};
 
   renderTable();
+  updateSelectedKPI();
 
 })();
 </script>
