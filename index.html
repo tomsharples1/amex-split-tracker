@@ -56,14 +56,6 @@ body{
 }
 
 .wrap{max-width:480px;margin:0 auto;padding:16px}
-.card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:18px;
-  padding:16px;
-  margin-bottom:14px;
-  overflow:hidden;
-}
 
 
 h2{
@@ -248,7 +240,11 @@ th{color:var(--muted);text-align:left}
 
 /* Column sizing */
 th:nth-child(1),
-td:nth-child(1){ width:70px; }
+td:nth-child(1){
+  width:82px;          /* was 70px */
+  white-space:nowrap; /* prevent date wrapping */
+}
+
 
 th:nth-child(2),
 td:nth-child(2){ width:70px; }
