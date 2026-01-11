@@ -56,7 +56,15 @@ body{
 }
 
 .wrap{max-width:480px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:14px;
+  overflow:hidden;
+}
+
 
 h2{
   margin:0 0 10px 0;
@@ -222,9 +230,41 @@ canvas{max-width:100%}
 
 .segBtn:not(:last-child){border-right:1px solid var(--border);}
 .segBtn.active{background:rgba(255,255,255,.08); color:var(--text);}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.08)}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  table-layout:fixed;
+}
+th, td{
+  padding:8px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  vertical-align:top;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
 th{color:var(--muted);text-align:left}
+
+
+/* Column sizing */
+th:nth-child(1),
+td:nth-child(1){ width:70px; }
+
+th:nth-child(2),
+td:nth-child(2){ width:70px; }
+
+th:nth-child(4),
+td:nth-child(4){
+  width:80px;
+  text-align:right;
+}
+
+th:nth-child(3),
+td:nth-child(3){
+  width:auto;
+}
+
+
 .badge{padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12)}
 
 /* Paid Off Strike Through */ 
