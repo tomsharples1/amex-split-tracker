@@ -941,4 +941,194 @@ function linkRefunds(rows, {
     }]},
     options:{
       plugins:{
-        legend:{
+        legend:{display:false},
+        tooltip:{enabled:false}
+      }, 
+
+      onClick:(evt, els)=>{
+        const action = $("barAction");
+
+        // Click outside → reset
+        if(!els.length){
+          selectedBarIndex = null;
+          bar.data.datasets[0].backgroundColor = [...barBaseColors];
+          action.hidden = true;
+          bar.update();
+          return;
+        }
+
+        selectedBarIndex = els[0].index;
+        updateBarAction(selectedBarIndex);
+      }
+
+      }
+  });
+
+  const barBaseColors = [
+    cssVar("--blue"),
+    cssVar("--blueDark"),
+    cssVar("--pink"),
+    cssVar("--pinkDark")
+  ];
+
+  function updateBarAction(i){
+    const action = $("barAction");
+    const m = monthly[months[idx]];
+
+    bar.data.datasets[0].backgroundColor = [...barBaseColors]
+      .map((c,ci)=> ci===i ? c : fade(c));
+
+    let title = "";
+    let message = "";
+
+    // Yousef
+    if(i === 0){
+      const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
+      title = `Yousef spent ${GBP(m.ys)} this month`;
+      message = remaining > 0
+        ? `Next: Repay ${GBP(remaining)} to settle this month`
+        : `This month is fully settled`;
+    }
+
+    if(i === 1){
+      const remaining = Math.max(0, m.ys - (m.ypg - m.ap));
+      title = `Yousef repaid ${GBP(m.ypg - m.ap)} this month`;
+      message = remaining > 0
+        ? `${GBP(remaining)} still outstanding`
+        : `This month is fully settled`;
+    }
+
+    // Aleeya
+    if(i === 2){
+      const remaining = Math.max(0, m.as - m.ap);
+      title = `Aleeya spent ${GBP(m.as)} this month`;
+      message = remaining > 0
+        ? `Next: Repay ${GBP(remaining)} to settle this month`
+        : `This month is fully settled`;
+    }
+
+    if(i === 3){
+      const remaining = Math.max(0, m.as - m.ap);
+      title = `Aleeya repaid ${GBP(m.ap)} this month`;
+      message = remaining > 0
+        ? `${GBP(remaining)} still outstanding`
+        : `This month is fully settled`;
+    }
+
+    action.innerHTML = `
+      <strong>${title}</strong>
+      <div class="hint">${message}</div>
+    `;
+    action.hidden = false;
+
+    bar.update();
+  }
+
+
+  function renderMonth(){
+    const m=monthly[months[idx]];
+    bar.data.datasets[0].data=[m.ys,Math.max(0,m.ypg-m.ap),m.as,m.ap];
+    bar.update();
+    $("monthLabel").textContent=monthPretty(months[idx]);
+  }
+  renderMonth();
+
+  /* Swipe: RIGHT = previous, LEFT = next */
+  let startX=0;
+  $("monthCard").ontouchstart=e=>startX=e.touches[0].clientX;
+  $("monthCard").ontouchend=e=>{
+  const dx=e.changedTouches[0].clientX-startX;
+    if(dx>40 && idx>0) idx--;
+    if(dx<-40 && idx<months.length-1) idx++;
+    renderMonth();
+
+    if(selectedBarIndex !== null){
+      updateBarAction(selectedBarIndex);
+    }
+  };
+ 
+
+  // Selected Rows for Table 
+  const selectedRows = new Set();
+
+  function updateSelectedKPI() {
+    const total = events
+      .filter(e => selectedRows.has(e.id))
+      .reduce((sum, e) => sum + Math.abs(e.amt), 0);
+
+    $("selectedTotal").textContent = GBP(total);
+  }
+
+  function resetSelection() {
+    selectedRows.clear();
+    updateSelectedKPI();
+  }
+
+  /* ---------- TABLE ---------- */
+  let filter="due";
+  function setActive(btn){
+    ["fltAll","fltSpent","fltPaid", "fltDue"].forEach(id=>$(id).classList.remove("active"));
+    btn.classList.add("active");
+  }
+
+  function renderTable(){
+    $("aLedger").innerHTML = events
+    // $("aLedger").innerHTML = aleeyaTableEvents
+
+      .filter(e=>{
+        if(filter === "all") return true;
+        if(filter === "spent") return e.type === "spent";
+        if(filter === "paid") return e.type === "paid";
+        if(filter === "due") return e.type === "spent" && !e.paidOff; // && !e.paidOff;
+      })
+      .sort((a,b)=>b.d-a.d)
+      .map(e => `
+        <tr
+          data-id="${e.id}"
+          class="
+            ${selectedRows.has(e.id) ? "activeRow" : ""}
+            ${
+              e.type==="spent" && e.paidOff ? "paidOff" :
+              e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
+              ""
+            }
+          "
+        >
+          <td>${e.d.toLocaleDateString("en-GB")}</td>
+          <td><span class="badge">${displayType(e.type)}</span></td>
+          <td>${e.desc}</td>
+          <td>${GBP(Math.abs(e.amt))}</td>
+        </tr>
+      `)
+      .join("");
+
+    // 👇👇 ADD THIS BLOCK
+    document.querySelectorAll("#aLedger tr").forEach(row => {
+      row.onclick = () => {
+        const id = Number(row.dataset.id);
+
+        if (selectedRows.has(id)) {
+          selectedRows.delete(id);
+        } else {
+          selectedRows.add(id);
+        }
+
+        updateSelectedKPI();
+        renderTable();
+      };
+    });
+  }
+
+  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);resetSelection();renderTable()};
+  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);resetSelection();renderTable()};
+  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);resetSelection();renderTable()};
+  $("fltDue").onclick=()=>{filter="due"; setActive(fltDue);resetSelection();renderTable();};
+
+  renderTable();
+  updateSelectedKPI();
+
+})();
+</script>
+
+</body>
+</html>
