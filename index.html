@@ -566,54 +566,61 @@ function linkRefunds(rows, {
   pctTolerance = 0.02       // 2%
 } = {}) {
 
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+  // --- Prepare metadata ---
   const meta = rows.map((r, i) => {
-    const amt = +r.amount || 0;
-    const d = new Date(r.date); // assumes parseable date; use your parseDate if needed
+    const amt = Number(r.amount) || 0;
+    const d = new Date(r.date);
     return {
       i,
       amt,
-      absPence: Math.round(Math.abs(amt)*100),
-      d: isNaN(d) ? null : d,
-      t: new Set(merchantTokens(r.description)),
+      abs: Math.abs(amt),
+      date: isNaN(d) ? null : d,
+      tokens: new Set(merchantTokens(r.description))
     };
   });
 
-  const charges = meta.filter(m => m.amt > 0 && m.d);
-  const refunds = meta.filter(m => m.amt < 0 && m.d);
+  const charges = meta.filter(m => m.amt > 0 && m.date);
+  const refunds = meta.filter(m => m.amt < 0 && m.date);
 
-  // Add fields without breaking your existing structure
+  // --- Initialise fields ---
   rows.forEach(r => {
+    r.is_refund = (Number(r.amount) || 0) < 0;
     r.refunded_amount = 0;
     r.matched_charge_id = null;
-    r.is_refund = (+r.amount||0) < 0;
+    r.applied_refund_amount = 0;
   });
 
+  // --- Match refunds to charges ---
   for (const rf of refunds) {
-    const rfAbs = Math.abs(rf.amt);
-
-    // Candidate charges must be before refund, within window
-    const candidates = charges.filter(ch => {
-      const diffDays = (rf.d - ch.d) / (1000*60*60*24);
-      if (diffDays < 0 || diffDays > daysWindow) return false;
-
-      const chAbs = ch.amt;
-      const tol = Math.max(absTolerancePence/100, chAbs * pctTolerance);
-      return Math.abs(chAbs - rfAbs) <= tol || rfAbs <= chAbs + tol; // allow partial refunds too
-    });
-
+    const refundAbs = rf.abs;
     let best = null;
     let bestScore = 0;
 
-    for (const ch of candidates) {
-      const sim = jaccard(ch.t, rf.t);
+    for (const ch of charges) {
+      const chargeRow = rows[ch.i];
 
-      // Prefer closer dates and closer amounts
-      const diffDays = (rf.d - ch.d) / (1000*60*60*24);
+      // Date window check
+      const diffDays = (rf.date - ch.date) / MS_PER_DAY;
+      if (diffDays < 0 || diffDays > daysWindow) continue;
+
+      // Remaining refundable capacity
+      const remaining =
+        Math.max(0, (Number(chargeRow.amount) || 0) - (chargeRow.refunded_amount || 0));
+      if (remaining <= 0) continue;
+
+      // Amount tolerance
+      const tol = Math.max(absTolerancePence / 100, ch.amt * pctTolerance);
+      if (refundAbs > ch.amt + tol) continue;
+
+      // Scoring
+      const sim = jaccard(ch.tokens, rf.tokens);
+
       const dateScore = 1 - Math.min(diffDays / daysWindow, 1);
-      const amtScore = 1 - Math.min(Math.abs(ch.amt - rfAbs) / Math.max(ch.amt, rfAbs), 1);
-
-      const remainingRatio =
-        remaining / Math.max(1, +rows[ch.i].amount);
+      const amtScore =
+        1 - Math.min(Math.abs(ch.amt - refundAbs) / Math.max(ch.amt, refundAbs), 1);
+      const remainingRatio = remaining / Math.max(1, ch.amt);
 
       const score =
         (0.55 * sim) +
@@ -621,6 +628,7 @@ function linkRefunds(rows, {
         (0.15 * amtScore) +
         (0.05 * remainingRatio);
 
+      if (!Number.isFinite(score)) continue;
 
       if (score > bestScore) {
         bestScore = score;
@@ -628,25 +636,24 @@ function linkRefunds(rows, {
       }
     }
 
+    // --- Apply refund (capped) ---
     if (best && bestScore >= minSim) {
       const chargeRow = rows[best.i];
 
       const remaining =
-        Math.max(0, (+chargeRow.amount || 0) - (chargeRow.refunded_amount || 0));
+        Math.max(0, (Number(chargeRow.amount) || 0) - (chargeRow.refunded_amount || 0));
 
-      if (remaining > 0) {
-        const applied = Math.min(remaining, rfAbs);
+      const applied = Math.min(remaining, refundAbs);
 
-        chargeRow.refunded_amount += applied;
-        rows[rf.i].matched_charge_id = best.i;
-        rows[rf.i].applied_refund_amount = applied; // optional but VERY useful
-      }
+      chargeRow.refunded_amount += applied;
+      rows[rf.i].matched_charge_id = best.i;
+      rows[rf.i].applied_refund_amount = applied;
     }
-
   }
 
   return rows;
 }
+
 
 
 (async()=>{
