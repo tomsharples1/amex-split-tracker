@@ -905,46 +905,4 @@ function stripRefundPairs(rows){
             ${selectedRows.has(e.id) ? "activeRow" : ""}
             ${
               e.type==="spent" && e.paidOff ? "paidOff" :
-              e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
-              ""
-            }
-          "
-        >
-          <td>${e.d.toLocaleDateString("en-GB")}</td>
-          <td><span class="badge">${displayType(e.type)}</span></td>
-          <td>${e.desc}</td>
-          <td>${GBP(Math.abs(e.amt))}</td>
-        </tr>
-      `)
-      .join("");
-
-    // 👇👇 ADD THIS BLOCK
-    document.querySelectorAll("#aLedger tr").forEach(row => {
-      row.onclick = () => {
-        const id = Number(row.dataset.id);
-
-        if (selectedRows.has(id)) {
-          selectedRows.delete(id);
-        } else {
-          selectedRows.add(id);
-        }
-
-        updateSelectedKPI();
-        renderTable();
-      };
-    });
-  }
-
-  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);resetSelection();renderTable()};
-  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);resetSelection();renderTable()};
-  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);resetSelection();renderTable()};
-  $("fltDue").onclick=()=>{filter="due"; setActive(fltDue);resetSelection();renderTable();};
-
-  renderTable();
-  updateSelectedKPI();
-
-})();
-</script>
-
-</body>
-</html>
+              e.type==="paid" && e.repaid && filter!=="
