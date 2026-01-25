@@ -563,8 +563,8 @@ function stripRefundPairs(rows){
     }
   ).data;
 
-  // const activity = stripRefundPairs(activityRaw);
-  const activity = activityRaw;
+  const activity = stripRefundPairs(activityRaw);
+  // const activity = activityRaw;
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
