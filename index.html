@@ -437,10 +437,16 @@ const cssVar = name =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
+// const displayType = type =>
+//   type === "paid" ? "Paid" :
+//   type === "spent" ? "Spend" :
+//   type;
 const displayType = type =>
   type === "paid" ? "Paid" :
+  type === "refund" ? "Refund" :
   type === "spent" ? "Spend" :
   type;
+
 
 const parseDate = s => {
   if (!s) return null;
@@ -683,7 +689,8 @@ function linkRefunds(rows, {
   ).data;
 
   // const activity = stripRefundPairs(activityRaw);
-  const activity = linkRefunds(activityRaw);
+  // const activity = linkRefunds(activityRaw);
+  const activity = activityRaw;
 
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
@@ -712,7 +719,7 @@ function linkRefunds(rows, {
       .filter(Boolean)
   );
 
-
+  /* // Old Activity Logic 
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
     const amt=+r.amount||0; if(!amt) return;
@@ -733,6 +740,84 @@ function linkRefunds(rows, {
       yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
     }
   });
+  */
+
+  // New activity logic 
+  activity.forEach(r => {
+    const d = parseDate(r.date); if(!d) return;
+    const amt = +r.amount || 0; if(!amt) return;
+
+    const isA = /ALEEYA/i.test(r.card_member || "");
+    const isPayment = amt < 0 && /PAYMENT/i.test(r.description);
+
+    const m = monthKey(d);
+    const b = ensure(m);
+
+    // Spend (positive)
+    if (amt > 0) {
+      if (isA) {
+        aSpend += amt;
+        aTx++;
+        b.as += amt;
+      } else {
+        ySpend += amt;
+        yTx++;
+        b.ys += amt;
+      }
+
+      events.push({
+        id: eventId++,
+        d,
+        type: "spent",
+        desc: r.description,
+        amt
+      });
+    }
+
+    // Payment (negative, settlement)
+    else if (isPayment) {
+      const paid = Math.abs(amt);
+
+      if (isA) {
+        aPaid += paid;
+        b.ap += paid;
+      } else {
+        yPaidGross += paid;
+        b.ypg += paid;
+      }
+
+      events.push({
+        id: eventId++,
+        d,
+        type: "paid",
+        desc: "Repayment",
+        amt: -paid,
+        repaid: true
+      });
+    }
+
+    // Refund (negative spend)
+    else {
+      const refund = Math.abs(amt);
+
+      if (isA) {
+        aSpend -= refund;
+        b.as -= refund;
+      } else {
+        ySpend -= refund;
+        b.ys -= refund;
+      }
+
+      events.push({
+        id: eventId++,
+        d,
+        type: "refund",
+        desc: r.description,
+        amt: -refund
+      });
+    }
+  });
+
 
 
   $("yp").textContent = GBP(Math.max(0, yPaidGross - aPaid));
@@ -977,7 +1062,7 @@ function linkRefunds(rows, {
         if(filter === "all") return true;
         if(filter === "spent") return e.type === "spent";
         if(filter === "paid") return e.type === "paid";
-        if(filter === "due") return e.type === "spent" && !e.paidOff;
+        if(filter === "due") return e.type === "spent"; // && !e.paidOff;
       })
       .sort((a,b)=>b.d-a.d)
       .map(e => `
