@@ -504,6 +504,7 @@ let pieCentreValue = 0;
 let pieCentreTx = 0;
 
 /* ---------- Refund pairing (stable) ---------- */
+/*
 function tokens(desc){
   const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
   return String(desc||"").toUpperCase()
@@ -536,6 +537,99 @@ function stripRefundPairs(rows){
   }
   return rows.filter((_,i)=>!used.has(i));
 }
+*/
+
+function merchantTokens(desc){
+  const noise = new Set([
+    "REFUND","REVERSAL","CREDIT","PAYMENT","PAYMENTS","CARD","PURCHASE",
+    "CO","UK","LTD","LIMITED","WWW","COM","AMEX","ONLINE"
+  ]);
+
+  return String(desc||"").toUpperCase()
+    .replace(/[^A-Z0-9 ]/g," ")
+    .split(/\s+/)
+    .filter(t => t.length >= 3 && !noise.has(t));
+}
+
+function jaccard(A,B){
+  if(!A.size || !B.size) return 0;
+  let inter=0;
+  for(const t of A) if(B.has(t)) inter++;
+  const union = A.size + B.size - inter;
+  return union ? inter/union : 0;
+}
+
+function linkRefunds(rows, {
+  daysWindow = 180,
+  minSim = 0.35,
+  absTolerancePence = 50,   // 50p
+  pctTolerance = 0.02       // 2%
+} = {}) {
+
+  const meta = rows.map((r, i) => {
+    const amt = +r.amount || 0;
+    const d = new Date(r.date); // assumes parseable date; use your parseDate if needed
+    return {
+      i,
+      amt,
+      absPence: Math.round(Math.abs(amt)*100),
+      d: isNaN(d) ? null : d,
+      t: new Set(merchantTokens(r.description)),
+    };
+  });
+
+  const charges = meta.filter(m => m.amt > 0 && m.d);
+  const refunds = meta.filter(m => m.amt < 0 && m.d);
+
+  // Add fields without breaking your existing structure
+  rows.forEach(r => {
+    r.refunded_amount = 0;
+    r.matched_charge_id = null;
+    r.is_refund = (+r.amount||0) < 0;
+  });
+
+  for (const rf of refunds) {
+    const rfAbs = Math.abs(rf.amt);
+
+    // Candidate charges must be before refund, within window
+    const candidates = charges.filter(ch => {
+      const diffDays = (rf.d - ch.d) / (1000*60*60*24);
+      if (diffDays < 0 || diffDays > daysWindow) return false;
+
+      const chAbs = ch.amt;
+      const tol = Math.max(absTolerancePence/100, chAbs * pctTolerance);
+      return Math.abs(chAbs - rfAbs) <= tol || rfAbs <= chAbs + tol; // allow partial refunds too
+    });
+
+    let best = null;
+    let bestScore = 0;
+
+    for (const ch of candidates) {
+      const sim = jaccard(ch.t, rf.t);
+
+      // Prefer closer dates and closer amounts
+      const diffDays = (rf.d - ch.d) / (1000*60*60*24);
+      const dateScore = 1 - Math.min(diffDays / daysWindow, 1);
+      const amtScore = 1 - Math.min(Math.abs(ch.amt - rfAbs) / Math.max(ch.amt, rfAbs), 1);
+
+      const score = (0.55 * sim) + (0.25 * dateScore) + (0.20 * amtScore);
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = ch;
+      }
+    }
+
+    if (best && bestScore >= minSim) {
+      // Link + apply refund against that charge (can be partial)
+      rows[rf.i].matched_charge_id = best.i;
+      rows[best.i].refunded_amount += rfAbs;
+    }
+  }
+
+  return rows;
+}
+
 
 (async()=>{
   /*
@@ -563,7 +657,9 @@ function stripRefundPairs(rows){
     }
   ).data;
 
-  const activity = stripRefundPairs(activityRaw);
+  // const activity = stripRefundPairs(activityRaw);
+  const activity = linkRefunds(activityRaw);
+
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
