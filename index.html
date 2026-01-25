@@ -754,30 +754,26 @@ function linkRefunds(rows, {
     const m = monthKey(d);
     const b = ensure(m);
 
-    // Spend (positive) — KPI maths ONLY
+    // Spend (positive)
     if (amt > 0) {
       if (isA) {
         aSpend += amt;
         aTx++;
         b.as += amt;
-
-        // TABLE: Aleeya spend only
-        events.push({
-          id: eventId++,
-          d,
-          type: "spent",
-          desc: r.description,
-          amt,
-          paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
-        });
-
       } else {
         ySpend += amt;
         yTx++;
         b.ys += amt;
       }
-    }
 
+      events.push({
+        id: eventId++,
+        d,
+        type: "spent",
+        desc: r.description,
+        amt
+      });
+    }
 
     // Payment (negative, settlement)
     else if (isPayment) {
@@ -1060,16 +1056,45 @@ function linkRefunds(rows, {
     ["fltAll","fltSpent","fltPaid", "fltDue"].forEach(id=>$(id).classList.remove("active"));
     btn.classList.add("active");
   }
+  
+  // Render Aleeya Table 
+  function buildAleeyaTableLedger(events, aPaidTotal) {
+    // 1️⃣ Aleeya-only rows
+    const rows = events
+      .filter(e => /ALEEYA/i.test(e.desc || "") || e.type !== "spent")
+      .filter(e => e.type !== "paid" || e.repaid) // keep repayments
+      .sort((a, b) => a.d - b.d);
+
+    // 2️⃣ Mark settled spend using running payments
+    let remaining = aPaidTotal;
+
+    for (const e of rows) {
+      if (e.type === "spent") {
+        if (remaining >= e.amt) {
+          remaining -= e.amt;
+          e.settled = true;
+        } else {
+          e.settled = false;
+        }
+      }
+    }
+
+    return rows;
+  }
+
+  // Declaring aleeya table
+  
+  const aleeyaTableEvents = buildAleeyaTableLedger(events, aPaid);
 
   function renderTable(){
-    $("aLedger").innerHTML = events
-    // $("aLedger").innerHTML = aleeyaTableEvents
+    // $("aLedger").innerHTML = events
+    $("aLedger").innerHTML = aleeyaTableEvents
 
       .filter(e=>{
         if(filter === "all") return true;
         if(filter === "spent") return e.type === "spent";
         if(filter === "paid") return e.type === "paid";
-        if(filter === "due") return e.type === "spent" && !e.paidOff;
+        if(filter === "due") return e.type === "spent" && !e.settled; // && !e.paidOff;
       })
       .sort((a,b)=>b.d-a.d)
       .map(e => `
