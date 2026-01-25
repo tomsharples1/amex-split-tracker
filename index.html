@@ -437,16 +437,10 @@ const cssVar = name =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
-// const displayType = type =>
-//   type === "paid" ? "Paid" :
-//   type === "spent" ? "Spend" :
-//   type;
 const displayType = type =>
   type === "paid" ? "Paid" :
-  type === "refund" ? "Refund" :
   type === "spent" ? "Spend" :
   type;
-
 
 const parseDate = s => {
   if (!s) return null;
@@ -510,7 +504,6 @@ let pieCentreValue = 0;
 let pieCentreTx = 0;
 
 /* ---------- Refund pairing (stable) ---------- */
-/*
 function tokens(desc){
   const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
   return String(desc||"").toUpperCase()
@@ -543,124 +536,6 @@ function stripRefundPairs(rows){
   }
   return rows.filter((_,i)=>!used.has(i));
 }
-*/
-
-function merchantTokens(desc){
-  const noise = new Set([
-    "REFUND","REVERSAL","CREDIT","PAYMENT","PAYMENTS","CARD","PURCHASE",
-    "CO","UK","LTD","LIMITED","WWW","COM","AMEX","ONLINE"
-  ]);
-
-  return String(desc||"").toUpperCase()
-    .replace(/[^A-Z0-9 ]/g," ")
-    .split(/\s+/)
-    .filter(t => t.length >= 3 && !noise.has(t));
-}
-
-function jaccard(A,B){
-  if(!A.size || !B.size) return 0;
-  let inter=0;
-  for(const t of A) if(B.has(t)) inter++;
-  const union = A.size + B.size - inter;
-  return union ? inter/union : 0;
-}
-
-function linkRefunds(rows, {
-  daysWindow = 180,
-  minSim = 0.35,
-  absTolerancePence = 50,   // 50p
-  pctTolerance = 0.02       // 2%
-} = {}) {
-
-  const MS_PER_DAY = 1000 * 60 * 60 * 24;
-
-  // --- Prepare metadata ---
-  const meta = rows.map((r, i) => {
-    const amt = Number(r.amount) || 0;
-    const d = new Date(r.date);
-    return {
-      i,
-      amt,
-      abs: Math.abs(amt),
-      date: isNaN(d) ? null : d,
-      tokens: new Set(merchantTokens(r.description))
-    };
-  });
-
-  const charges = meta.filter(m => m.amt > 0 && m.date);
-  const refunds = meta.filter(m => m.amt < 0 && m.date);
-
-  // --- Initialise fields ---
-  rows.forEach(r => {
-    r.is_refund = (Number(r.amount) || 0) < 0;
-    r.refunded_amount = 0;
-    r.matched_charge_id = null;
-    r.applied_refund_amount = 0;
-  });
-
-  // --- Match refunds to charges ---
-  for (const rf of refunds) {
-    const refundAbs = rf.abs;
-    let best = null;
-    let bestScore = 0;
-
-    for (const ch of charges) {
-      const chargeRow = rows[ch.i];
-
-      // Date window check
-      const diffDays = (rf.date - ch.date) / MS_PER_DAY;
-      if (diffDays < 0 || diffDays > daysWindow) continue;
-
-      // Remaining refundable capacity
-      const remaining =
-        Math.max(0, (Number(chargeRow.amount) || 0) - (chargeRow.refunded_amount || 0));
-      if (remaining <= 0) continue;
-
-      // Amount tolerance
-      const tol = Math.max(absTolerancePence / 100, ch.amt * pctTolerance);
-      if (refundAbs > ch.amt + tol) continue;
-
-      // Scoring
-      const sim = jaccard(ch.tokens, rf.tokens);
-
-      const dateScore = 1 - Math.min(diffDays / daysWindow, 1);
-      const amtScore =
-        1 - Math.min(Math.abs(ch.amt - refundAbs) / Math.max(ch.amt, refundAbs), 1);
-      const remainingRatio = remaining / Math.max(1, ch.amt);
-
-      const score =
-        (0.55 * sim) +
-        (0.25 * dateScore) +
-        (0.15 * amtScore) +
-        (0.05 * remainingRatio);
-
-      if (!Number.isFinite(score)) continue;
-
-      if (score > bestScore) {
-        bestScore = score;
-        best = ch;
-      }
-    }
-
-    // --- Apply refund (capped) ---
-    if (best && bestScore >= minSim) {
-      const chargeRow = rows[best.i];
-
-      const remaining =
-        Math.max(0, (Number(chargeRow.amount) || 0) - (chargeRow.refunded_amount || 0));
-
-      const applied = Math.min(remaining, refundAbs);
-
-      chargeRow.refunded_amount += applied;
-      rows[rf.i].matched_charge_id = best.i;
-      rows[rf.i].applied_refund_amount = applied;
-    }
-  }
-
-  return rows;
-}
-
-
 
 (async()=>{
   /*
@@ -689,9 +564,7 @@ function linkRefunds(rows, {
   ).data;
 
   // const activity = stripRefundPairs(activityRaw);
-  // const activity = linkRefunds(activityRaw);
   const activity = activityRaw;
-
 
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
@@ -719,7 +592,7 @@ function linkRefunds(rows, {
       .filter(Boolean)
   );
 
-  /* // Old Activity Logic 
+
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
     const amt=+r.amount||0; if(!amt) return;
@@ -740,85 +613,6 @@ function linkRefunds(rows, {
       yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
     }
   });
-  */
-
-  // New activity logic 
-  activity.forEach(r => {
-    const d = parseDate(r.date); if(!d) return;
-    const amt = +r.amount || 0; if(!amt) return;
-
-    const isA = /ALEEYA/i.test(r.card_member || "");
-
-    const isPayment = amt < 0 && /PAYMENT/i.test(r.description);
-
-    const m = monthKey(d);
-    const b = ensure(m);
-
-    // Spend (positive)
-    if (amt > 0) {
-      if (isA) {
-        aSpend += amt;
-        aTx++;
-        b.as += amt;
-      } else {
-        ySpend += amt;
-        yTx++;
-        b.ys += amt;
-      }
-
-      events.push({
-        id: eventId++,
-        d,
-        type: "spent",
-        desc: r.description,
-        amt
-      });
-    }
-
-    // Payment (negative, settlement)
-    else if (isPayment) {
-      const paid = Math.abs(amt);
-
-      if (isA) {
-        aPaid += paid;
-        b.ap += paid;
-      } else {
-        yPaidGross += paid;
-        b.ypg += paid;
-      }
-
-      events.push({
-        id: eventId++,
-        d,
-        type: "paid",
-        desc: "Repayment",
-        amt: -paid,
-        repaid: true
-      });
-    }
-
-    // Refund (negative spend)
-    else {
-      const refund = Math.abs(amt);
-
-      if (isA) {
-        aSpend -= refund;
-        b.as -= refund;
-      } else {
-        ySpend -= refund;
-        b.ys -= refund;
-      }
-
-      events.push({
-        id: eventId++,
-        d,
-        type: "refund",
-        desc: r.description,
-        amt: -refund
-      });
-    }
-  });
-
 
 
   $("yp").textContent = GBP(Math.max(0, yPaidGross - aPaid));
@@ -1056,43 +850,14 @@ function linkRefunds(rows, {
     ["fltAll","fltSpent","fltPaid", "fltDue"].forEach(id=>$(id).classList.remove("active"));
     btn.classList.add("active");
   }
-  
-  // Render Aleeya Table 
-  function buildAleeyaTableLedger(events, aPaidTotal) {
-    // 1️⃣ Aleeya-only rows
-    const rows = events
-      .filter(e => /ALEEYA/i.test(e.desc || "") || e.type !== "spent")
-      .filter(e => e.type !== "paid" || e.repaid) // keep repayments
-      .sort((a, b) => a.d - b.d);
-
-    // 2️⃣ Mark settled spend using running payments
-    let remaining = aPaidTotal;
-
-    for (const e of rows) {
-      if (e.type === "spent") {
-        if (remaining >= e.amt) {
-          remaining -= e.amt;
-          e.settled = true;
-        } else {
-          e.settled = false;
-        }
-      }
-    }
-
-    return rows;
-  }
-
-  const aleeyaTableEvents = buildAleeyaTableLedger(events, aPaid);
 
   function renderTable(){
-    // $("aLedger").innerHTML = events
-    $("aLedger").innerHTML = aleeyaTableEvents
-
+    $("aLedger").innerHTML = events
       .filter(e=>{
         if(filter === "all") return true;
         if(filter === "spent") return e.type === "spent";
         if(filter === "paid") return e.type === "paid";
-        if(filter === "due") return e.type === "spent" && !e.settled; // && !e.paidOff;
+        if(filter === "due") return e.type === "spent" && !e.paidOff;
       })
       .sort((a,b)=>b.d-a.d)
       .map(e => `
