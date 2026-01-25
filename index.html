@@ -593,13 +593,38 @@ function stripRefundPairs(rows){
   );
 
 
+  // activity.forEach(r=>{
+  //   const d=parseDate(r.date); if(!d) return;
+  //   const amt=+r.amount||0; if(!amt) return;
+  //   const m=monthKey(d),b=ensure(m);
+  //   const isA=/ALEEYA/i.test(r.card_member||"");
+  //   if(amt>0){
+  //     if(isA){aSpend+=amt;aTx++;b.as+=amt;
+  //       events.push({
+  //         id: eventId++,
+  //         d,
+  //         type:"spent",
+  //         desc:r.description,
+  //         amt,
+  //         paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
+  //       })}
+  //     else{ySpend+=amt;yTx++;b.ys+=amt}
+  //   }else if(!isA&&/PAYMENT/i.test(r.description)){
+  //     yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
+  //   }
+  // });
+
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
     const amt=+r.amount||0; if(!amt) return;
     const m=monthKey(d),b=ensure(m);
     const isA=/ALEEYA/i.test(r.card_member||"");
-    if(amt>0){
-      if(isA){aSpend+=amt;aTx++;b.as+=amt;
+    
+    if(isA){
+      // Aleeya's transactions
+      if(amt>0){
+        // Spending
+        aSpend+=amt;aTx++;b.as+=amt;
         events.push({
           id: eventId++,
           d,
@@ -607,10 +632,23 @@ function stripRefundPairs(rows){
           desc:r.description,
           amt,
           paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
-        })}
-      else{ySpend+=amt;yTx++;b.ys+=amt}
-    }else if(!isA&&/PAYMENT/i.test(r.description)){
-      yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
+        });
+      } else {
+        // Refund (negative amount)
+        aSpend+=amt; // This reduces spending since amt is negative
+        b.as+=amt;
+      }
+    } else {
+      // Yousef's transactions
+      if(amt>0){
+        ySpend+=amt;yTx++;b.ys+=amt;
+      } else if(/PAYMENT/i.test(r.description)){
+        yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
+      } else {
+        // Yousef's refund
+        ySpend+=amt; // This reduces spending since amt is negative
+        b.ys+=amt;
+      }
     }
   });
 
