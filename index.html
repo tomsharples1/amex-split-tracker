@@ -612,7 +612,15 @@ function linkRefunds(rows, {
       const dateScore = 1 - Math.min(diffDays / daysWindow, 1);
       const amtScore = 1 - Math.min(Math.abs(ch.amt - rfAbs) / Math.max(ch.amt, rfAbs), 1);
 
-      const score = (0.55 * sim) + (0.25 * dateScore) + (0.20 * amtScore);
+      const remainingRatio =
+        remaining / Math.max(1, +rows[ch.i].amount);
+
+      const score =
+        (0.55 * sim) +
+        (0.25 * dateScore) +
+        (0.15 * amtScore) +
+        (0.05 * remainingRatio);
+
 
       if (score > bestScore) {
         bestScore = score;
@@ -621,10 +629,20 @@ function linkRefunds(rows, {
     }
 
     if (best && bestScore >= minSim) {
-      // Link + apply refund against that charge (can be partial)
-      rows[rf.i].matched_charge_id = best.i;
-      rows[best.i].refunded_amount += rfAbs;
+      const chargeRow = rows[best.i];
+
+      const remaining =
+        Math.max(0, (+chargeRow.amount || 0) - (chargeRow.refunded_amount || 0));
+
+      if (remaining > 0) {
+        const applied = Math.min(remaining, rfAbs);
+
+        chargeRow.refunded_amount += applied;
+        rows[rf.i].matched_charge_id = best.i;
+        rows[rf.i].applied_refund_amount = applied; // optional but VERY useful
+      }
     }
+
   }
 
   return rows;
