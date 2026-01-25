@@ -754,26 +754,30 @@ function linkRefunds(rows, {
     const m = monthKey(d);
     const b = ensure(m);
 
-    // Spend (positive)
+    // Spend (positive) — KPI maths ONLY
     if (amt > 0) {
       if (isA) {
         aSpend += amt;
         aTx++;
         b.as += amt;
+
+        // TABLE: Aleeya spend only
+        events.push({
+          id: eventId++,
+          d,
+          type: "spent",
+          desc: r.description,
+          amt,
+          paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
+        });
+
       } else {
         ySpend += amt;
         yTx++;
         b.ys += amt;
       }
-
-      events.push({
-        id: eventId++,
-        d,
-        type: "spent",
-        desc: r.description,
-        amt
-      });
     }
+
 
     // Payment (negative, settlement)
     else if (isPayment) {
