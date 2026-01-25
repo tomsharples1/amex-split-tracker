@@ -690,7 +690,6 @@ function linkRefunds(rows, {
 
   // const activity = stripRefundPairs(activityRaw);
   // const activity = linkRefunds(activityRaw);
-  
   const activity = activityRaw;
 
 
@@ -776,19 +775,6 @@ function linkRefunds(rows, {
       });
     }
 
-    // TABLE ONLY: Aleeya spend
-    if (amt > 0 && isA) {
-      events.push({
-        id: eventId++,
-        d,
-        type: "spent",
-        desc: r.description,
-        amt,
-        paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
-      });
-    }
-
-
     // Payment (negative, settlement)
     else if (isPayment) {
       const paid = Math.abs(amt);
@@ -818,20 +804,19 @@ function linkRefunds(rows, {
       if (isA) {
         aSpend -= refund;
         b.as -= refund;
-
-        events.push({
-          id: eventId++,
-          d,
-          type: "refund",
-          desc: r.description,
-          amt: -refund
-        });
       } else {
         ySpend -= refund;
         b.ys -= refund;
       }
-    }
 
+      events.push({
+        id: eventId++,
+        d,
+        type: "refund",
+        desc: r.description,
+        amt: -refund
+      });
+    }
   });
 
 
@@ -1080,7 +1065,7 @@ function linkRefunds(rows, {
         if(filter === "all") return true;
         if(filter === "spent") return e.type === "spent";
         if(filter === "paid") return e.type === "paid";
-        if(filter === "due") return e.type === "spent" && !e.paidOff; // && !e.paidOff;
+        if(filter === "due") return e.type === "spent" && !e.paidOff;
       })
       .sort((a,b)=>b.d-a.d)
       .map(e => `
