@@ -505,39 +505,29 @@ function animateInt(el, from, to, suffix="", duration=250){
 let pieCentreValue = 0;
 let pieCentreTx = 0;
 
-/* ---------- Refund pairing (stable) ---------- */
-function tokens(desc){
-  const noise=new Set(["REFUND","REVERSAL","PAYMENT","CO","UK","LTD","LIMITED","WWW","COM"]);
-  return String(desc||"").toUpperCase()
-    .replace(/[^A-Z0-9 ]/g," ")
-    .split(" ").filter(t=>t.length>=3&&!noise.has(t));
+
+/* ---------- Refund matching helpers (UI-only) ---------- */
+const STOP_WORDS = new Set([
+  "THE","AND","PAYMENT","REFUND","REVERSAL","CARD","LIMITED","LTD",
+  "UK","WWW","COM","STORE","ONLINE","PURCHASE"
+]);
+
+function tokenize(desc){
+  return new Set(
+    String(desc || "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9 ]/g, " ")
+      .split(/\s+/)
+      .filter(t => t.length >= 3 && !STOP_WORDS.has(t))
+  );
 }
-function similarity(A,B){
-  let i=0; for(const t of A) if(B.has(t)) i++;
-  return i/Math.min(A.size,B.size);
+
+function jaccard(a, b){
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  return inter / Math.max(1, a.size + b.size - inter);
 }
-function stripRefundPairs(rows){
-  const buckets=new Map(),meta=[];
-  rows.forEach((r,i)=>{
-    const amt=+r.amount; if(!amt) return;
-    const k=Math.round(Math.abs(amt)*100);
-    meta[i]={amt,t:new Set(tokens(r.description))};
-    buckets.set(k,buckets.get(k)||{p:[],n:[]});
-    (amt>0?buckets.get(k).p:buckets.get(k).n).push(i);
-  });
-  const used=new Set();
-  for(const {p,n} of buckets.values()){
-    for(const ni of n){
-      let best=null,s=0;
-      for(const pi of p){
-        const sc=similarity(meta[pi].t,meta[ni].t);
-        if(sc>s){s=sc;best=pi;}
-      }
-      if(best!==null&&s>=0.55){used.add(best);used.add(ni);}
-    }
-  }
-  return rows.filter((_,i)=>!used.has(i));
-}
+
 
 (async()=>{
   /*
@@ -588,12 +578,31 @@ function stripRefundPairs(rows){
       owner: "aleeya"
     });
   });
-  /*
-  const aleeyaPaymentAmounts = new Set(
-    payments
-      .map(r => Math.round(Math.abs(+r.amount || 0) * 100))
-      .filter(Boolean)
-  );*/
+
+  /* ---------- Group refunds by vendor + day ---------- */
+  function groupRefunds(events){
+    const groups = new Map();
+
+    events.forEach(e => {
+      if (e.type !== "refund") return;
+
+      const day = e.d.toISOString().slice(0,10);
+      const tokens = tokenize(e.desc);
+      const key = day + "::" + [...tokens].sort().join("|");
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          date: e.d,
+          tokens,
+          amount: 0
+        });
+      }
+
+      groups.get(key).amount += Math.abs(e.amt);
+    });
+
+    return [...groups.values()];
+  }
 
   // Replace the Set with a count-map (in pennies)
   const aleeyaPaymentCounts = new Map();
@@ -790,6 +799,56 @@ function stripRefundPairs(rows){
   animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
   pieCentreTx = yTx + aTx;
 
+  /* ---------- Refund allocation (UI-only) ---------- */
+  function applyRefundAllocations(events){
+    const spends = events
+      .filter(e => e.type === "spent")
+      .map(e => ({
+        ...e,
+        tokens: tokenize(e.desc),
+        remaining: e.amt
+      }));
+
+    const refunds = groupRefunds(events);
+
+    refunds.forEach(ref => {
+      let remainingRefund = ref.amount;
+
+      const candidates = spends
+        .filter(s =>
+          s.remaining > 0 &&
+          s.d <= ref.date
+        )
+        .map(s => ({
+          spend: s,
+          score: jaccard(ref.tokens, s.tokens)
+        }))
+        .filter(x => x.score >= 0.25)
+        .sort((a,b) =>
+          b.score - a.score ||
+          b.spend.d - a.spend.d
+        );
+
+      for (const { spend } of candidates) {
+        if (remainingRefund <= 0) break;
+
+        const applied = Math.min(spend.remaining, remainingRefund);
+        spend.remaining -= applied;
+        remainingRefund -= applied;
+
+        spend.refundApplied =
+          (spend.refundApplied || 0) + applied;
+      }
+    });
+
+    return spends;
+  }
+
+  /* Build lookup for table rendering */
+  const refundedSpends = applyRefundAllocations(events);
+  const refundMap = new Map(refundedSpends.map(s => [s.id, s]));
+
+
   /* ---------- BAR ---------- */
   const months=Object.keys(monthly).sort();
   let idx=months.length-1;
@@ -962,12 +1021,22 @@ function stripRefundPairs(rows){
           <td>${e.d.toLocaleDateString("en-GB")}</td>
           <td><span class="badge">${displayType(e.type)}</span></td>
           <td>${e.desc}</td>
-          <td>${GBP(Math.abs(e.amt))}</td>
+          <td>
+            ${
+              e.type === "spent" && refundMap.has(e.id)
+                ? GBP(refundMap.get(e.id).remaining)
+                : GBP(Math.abs(e.amt))
+            }
+            ${
+              refundMap.get(e.id)?.refundApplied
+                ? `<div class="sub">−${GBP(refundMap.get(e.id).refundApplied)} refunded</div>`
+                : ""
+            }
+          </td>
         </tr>
       `)
       .join("");
 
-    // 👇👇 ADD THIS BLOCK
     document.querySelectorAll("#aLedger tr").forEach(row => {
       row.onclick = () => {
         const id = Number(row.dataset.id);
