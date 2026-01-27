@@ -954,6 +954,7 @@ function summariseDescription(desc, type){
         pie.data.datasets[0].offset[i] = 10;
 
         renderCentreKPI();
+        // Rotation Fix 
         pie.options.rotation = getPieRotation(yousefOutstanding, aleeyaOutstanding);
         pie.update();
 
