@@ -612,8 +612,12 @@ function summariseDescription(desc, type){
   let events=[];
   let eventId = 0;
 
-  // New Payments 
+  // Latest Dates for centre KPIs
   let lastAleeyaPaymentDate = null;
+  let lastYousefPaymentDate = null;
+
+  let lastActivityDate = null;
+
 
   payments.forEach(r=>{
     const d = parseDate(r.date); if(!d) return;
@@ -637,22 +641,6 @@ function summariseDescription(desc, type){
     });
   });
 
-
-  /*
-  payments.forEach(r=>{
-    const d=parseDate(r.date); if(!d) return;
-    const amt=Math.abs(+r.amount||0); if(!amt) return;
-    aPaid+=amt; ensure(monthKey(d)).ap+=amt;
-    events.push({
-      id: eventId++,
-      d,
-      type: "paid",
-      desc: "Repayment",
-      amt: -amt,
-      repaid: true, 
-      owner: "aleeya"
-    });
-  });*/
 
   /* ---------- Group refunds by vendor + day ---------- */
   function groupRefunds(events){
@@ -708,14 +696,18 @@ function summariseDescription(desc, type){
     r.amount > 0;
 
 
-
   activity.forEach(r => {
     const d = parseDate(r.date);
     if (!d) return;
 
+    if (!lastActivityDate || d > lastActivityDate) {
+      lastActivityDate = d;
+    }
+
     const amt = +r.amount || 0;
     if (!amt) return;
 
+    // Spend, Refund and Payments 
     const m = monthKey(d);
     const b = ensure(m);
 
@@ -765,7 +757,6 @@ function summariseDescription(desc, type){
     }
 
     /* ---------- PAYMENT ---------- */
-    let lastYousefPaymentDate = null;
 
     if (isPayment(r)) {
       const payment = Math.abs(amt);
@@ -830,7 +821,13 @@ function summariseDescription(desc, type){
       pieCentreValue = totalOutstanding;
 
       // Make this dynamic as of max statement date 
-      $("pcTx").textContent = "Last Updated: Today";
+      $("pcTx").textContent =
+      lastActivityDate
+        ? `Last updated ${lastActivityDate.toLocaleDateString(
+            "en-GB",
+            { day: "numeric", month: "short", year: "numeric" }
+          )}`
+        : ""; 
       return;
     }
 
@@ -893,7 +890,7 @@ function summariseDescription(desc, type){
         borderRadius:12,
         offset:[0,0],
         radius:["100%","100%"],
-        rotation: -90 * (Math.PI / 180),
+        // rotation: -90 * (Math.PI / 180),
       }]
     },
     options:{
