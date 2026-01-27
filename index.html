@@ -592,7 +592,18 @@ function stripRefundPairs(rows){
       .filter(Boolean)
   );
 
+  // Transaction Helpers 
+  const isPayment = r =>
+    r.amount < 0 && /PAYMENT/i.test(r.description || "");
 
+  const isRefund = r =>
+    r.amount < 0 && !/PAYMENT/i.test(r.description || "");
+
+  const isSpend = r =>
+    r.amount > 0;
+
+
+  /*
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
     const amt=+r.amount||0; if(!amt) return;
@@ -612,7 +623,81 @@ function stripRefundPairs(rows){
     }else if(!isA&&/PAYMENT/i.test(r.description)){
       yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
     }
+  });*/
+
+  activity.forEach(r => {
+    const d = parseDate(r.date);
+    if (!d) return;
+
+    const amt = +r.amount || 0;
+    if (!amt) return;
+
+    const m = monthKey(d);
+    const b = ensure(m);
+
+    const isA = /ALEEYA/i.test(r.card_member || "");
+
+    /* ---------- SPEND ---------- */
+    if (isSpend(r)) {
+      if (isA) {
+        aSpend += amt;
+        aTx++;
+        b.as += amt;
+
+        events.push({
+          id: eventId++,
+          d,
+          type: "spent",
+          desc: r.description,
+          amt,
+        });
+      } else {
+        ySpend += amt;
+        yTx++;
+        b.ys += amt;
+      }
+    }
+
+    /* ---------- REFUND ---------- */
+    if (isRefund(r)) {
+      const refund = Math.abs(amt);
+
+      if (isA) {
+        aSpend -= refund;
+        b.as -= refund;
+      } else {
+        ySpend -= refund;
+        b.ys -= refund;
+      }
+
+      events.push({
+        id: eventId++,
+        d,
+        type: "refund",
+        desc: r.description,
+        amt: -refund,
+      });
+    }
+
+    /* ---------- PAYMENT ---------- */
+    if (isPayment(r)) {
+      const payment = Math.abs(amt);
+
+      // All payments reduce total liability (primary cardholder)
+      yPaidGross += payment;
+      b.ypg += payment;
+
+      events.push({
+        id: eventId++,
+        d,
+        type: "paid",
+        desc: r.description,
+        amt: -payment,
+        repaid: true,
+      });
+    }
   });
+
 
 
   $("yp").textContent = GBP(Math.max(0, yPaidGross - aPaid));
