@@ -563,9 +563,9 @@ function stripRefundPairs(rows){
     }
   ).data;
 
-  const activity = stripRefundPairs(activityRaw);
-  // const activity = activityRaw;
-
+  // const activity = stripRefundPairs(activityRaw);
+  const activity = activityRaw; 
+  
   let ySpend=0,aSpend=0,yTx=0,aTx=0,yPaidGross=0,aPaid=0;
   const monthly={},ensure=m=>monthly[m]??={ys:0,as:0,ypg:0,ap:0};
 
@@ -593,38 +593,13 @@ function stripRefundPairs(rows){
   );
 
 
-  // activity.forEach(r=>{
-  //   const d=parseDate(r.date); if(!d) return;
-  //   const amt=+r.amount||0; if(!amt) return;
-  //   const m=monthKey(d),b=ensure(m);
-  //   const isA=/ALEEYA/i.test(r.card_member||"");
-  //   if(amt>0){
-  //     if(isA){aSpend+=amt;aTx++;b.as+=amt;
-  //       events.push({
-  //         id: eventId++,
-  //         d,
-  //         type:"spent",
-  //         desc:r.description,
-  //         amt,
-  //         paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
-  //       })}
-  //     else{ySpend+=amt;yTx++;b.ys+=amt}
-  //   }else if(!isA&&/PAYMENT/i.test(r.description)){
-  //     yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
-  //   }
-  // });
-
   activity.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
     const amt=+r.amount||0; if(!amt) return;
     const m=monthKey(d),b=ensure(m);
     const isA=/ALEEYA/i.test(r.card_member||"");
-    
-    if(isA){
-      // Aleeya's transactions
-      if(amt>0){
-        // Spending
-        aSpend+=amt;aTx++;b.as+=amt;
+    if(amt>0){
+      if(isA){aSpend+=amt;aTx++;b.as+=amt;
         events.push({
           id: eventId++,
           d,
@@ -632,23 +607,10 @@ function stripRefundPairs(rows){
           desc:r.description,
           amt,
           paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
-        });
-      } else {
-        // Refund (negative amount)
-        aSpend+=amt; // This reduces spending since amt is negative
-        b.as+=amt;
-      }
-    } else {
-      // Yousef's transactions
-      if(amt>0){
-        ySpend+=amt;yTx++;b.ys+=amt;
-      } else if(/PAYMENT/i.test(r.description)){
-        yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
-      } else {
-        // Yousef's refund
-        ySpend+=amt; // This reduces spending since amt is negative
-        b.ys+=amt;
-      }
+        })}
+      else{ySpend+=amt;yTx++;b.ys+=amt}
+    }else if(!isA&&/PAYMENT/i.test(r.description)){
+      yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
     }
   });
 
@@ -905,4 +867,46 @@ function stripRefundPairs(rows){
             ${selectedRows.has(e.id) ? "activeRow" : ""}
             ${
               e.type==="spent" && e.paidOff ? "paidOff" :
-              e.type==="paid" && e.repaid && filter!=="
+              e.type==="paid" && e.repaid && filter!=="paid" ? "repaid" :
+              ""
+            }
+          "
+        >
+          <td>${e.d.toLocaleDateString("en-GB")}</td>
+          <td><span class="badge">${displayType(e.type)}</span></td>
+          <td>${e.desc}</td>
+          <td>${GBP(Math.abs(e.amt))}</td>
+        </tr>
+      `)
+      .join("");
+
+    // 👇👇 ADD THIS BLOCK
+    document.querySelectorAll("#aLedger tr").forEach(row => {
+      row.onclick = () => {
+        const id = Number(row.dataset.id);
+
+        if (selectedRows.has(id)) {
+          selectedRows.delete(id);
+        } else {
+          selectedRows.add(id);
+        }
+
+        updateSelectedKPI();
+        renderTable();
+      };
+    });
+  }
+
+  $("fltAll").onclick=()=>{filter="all";setActive(fltAll);resetSelection();renderTable()};
+  $("fltSpent").onclick=()=>{filter="spent";setActive(fltSpent);resetSelection();renderTable()};
+  $("fltPaid").onclick=()=>{filter="paid";setActive(fltPaid);resetSelection();renderTable()};
+  $("fltDue").onclick=()=>{filter="due"; setActive(fltDue);resetSelection();renderTable();};
+
+  renderTable();
+  updateSelectedKPI();
+
+})();
+</script>
+
+</body>
+</html>
