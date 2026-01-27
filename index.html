@@ -808,6 +808,22 @@ function summariseDescription(desc, type){
   $("ypProg").style.height = `${Math.min(100, yousefPct)}%`;
 
 
+  // Pie chart rotation Dynamics 
+  const isYousefSmaller = yousefOutstanding <= aleeyaOutstanding;
+
+  function getPieRotation() {
+    // Base rotation: start at top
+    const base = -90 * Math.PI / 180;
+
+    // If Yousef is smaller, rotate so slice 0 (Yousef) sits left
+    // If Aleeya is smaller, rotate so slice 1 (Aleeya) sits right
+    return isYousefSmaller
+      ? base + Math.PI     // rotate 180° → smaller slice left
+      : base;              // default → smaller slice right
+  }
+
+
+
   function renderCentreKPI(){
     // GLOBAL VIEW
     if (!focusOwner) {
@@ -890,7 +906,7 @@ function summariseDescription(desc, type){
         borderRadius:12,
         offset:[0,0],
         radius:["100%","100%"],
-        // rotation: -90 * (Math.PI / 180),
+        rotation: getPieRotation(),
       }]
     },
     options:{
@@ -925,6 +941,7 @@ function summariseDescription(desc, type){
         pie.data.datasets[0].offset[i] = 10;
 
         renderCentreKPI();
+        pie.options.rotation = getPieRotation();
         pie.update();
 
       }
