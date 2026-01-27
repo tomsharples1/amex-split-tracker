@@ -72,7 +72,30 @@ h3{
 }
 .row{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-top:6px}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
-.kpiGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* .kpiGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px} */
+.kpiGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  transition:all .35s ease;
+}
+
+/* Focus mode animations */
+body.focus-aleeya .kpi.yousef,
+body.focus-yousef .kpi.aleeya{
+  opacity:0;
+  transform:translateY(20px);
+  pointer-events:none;
+}
+
+body.focus-aleeya .kpi.aleeya,
+body.focus-yousef .kpi.yousef{
+  grid-column:1 / -1;
+  transform:translateY(-20px) scale(1.05);
+}
+
+
 .kpi{text-align:center}
 .mid{font-size:18px;font-weight:900}
 .mid.remaining{font-size:26px; letter-spacing:-.02em;}
@@ -507,6 +530,8 @@ function animateInt(el, from, to, suffix="", duration=250){
 let pieCentreValue = 0;
 let pieCentreTx = 0;
 
+let focusOwner = null; // null | "aleeya" | "yousef"
+
 
 /* ---------- Refund matching helpers (UI-only) ---------- */
 const STOP_WORDS = new Set([
@@ -610,6 +635,33 @@ function summariseDescription(desc, type){
   let events=[];
   let eventId = 0;
 
+  // New Payments 
+  let lastAleeyaPaymentDate = null;
+
+  payments.forEach(r=>{
+    const d = parseDate(r.date); if(!d) return;
+    const amt = Math.abs(+r.amount || 0); if(!amt) return;
+
+    aPaid += amt;
+    ensure(monthKey(d)).ap += amt;
+
+    if (!lastAleeyaPaymentDate || d > lastAleeyaPaymentDate) {
+      lastAleeyaPaymentDate = d;
+    }
+
+    events.push({
+      id: eventId++,
+      d,
+      type: "paid",
+      desc: "Repayment",
+      amt: -amt,
+      repaid: true,
+      owner: "aleeya"
+    });
+  });
+
+
+  /*
   payments.forEach(r=>{
     const d=parseDate(r.date); if(!d) return;
     const amt=Math.abs(+r.amount||0); if(!amt) return;
@@ -623,7 +675,7 @@ function summariseDescription(desc, type){
       repaid: true, 
       owner: "aleeya"
     });
-  });
+  });*/
 
   /* ---------- Group refunds by vendor + day ---------- */
   function groupRefunds(events){
@@ -770,6 +822,37 @@ function summariseDescription(desc, type){
   $("ypProg").style.height = `${Math.min(100, yousefPct)}%`;
 
 
+  function renderCentreKPI(){
+    if (!focusOwner) {
+      $("pcTitle").textContent = "Outstanding balance";
+      animateNumber($("pcTotal"), pieCentreValue, yr + ar);
+      pieCentreValue = yr + ar;
+      animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
+      pieCentreTx = yTx + aTx;
+      return;
+    }
+
+    if (focusOwner === "aleeya") {
+      $("pcTitle").textContent = "Aleeya owes";
+      animateNumber($("pcTotal"), pieCentreValue, ar);
+      pieCentreValue = ar;
+
+      $("pcTx").textContent =
+        lastAleeyaPaymentDate
+          ? `Last payment ${lastAleeyaPaymentDate.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}`
+          : "No payments yet";
+    }
+
+    if (focusOwner === "yousef") {
+      $("pcTitle").textContent = "Yousef owes";
+      animateNumber($("pcTotal"), pieCentreValue, yr);
+      pieCentreValue = yr;
+      $("pcTx").textContent = "";
+    }
+  }
+
+
+
   /* ---------- PIE (interactive, animated, spaced) ---------- */
   const pie = new Chart($("pie"),{
     type:"doughnut",
@@ -799,6 +882,7 @@ function summariseDescription(desc, type){
         const ds = pie.data.datasets[0];
 
         // Reset (tap outside slices)
+        /*
         if(!els.length){
           ds.offset = [0,0];
           ds.radius = ["100%","100%"];
@@ -809,9 +893,20 @@ function summariseDescription(desc, type){
           pieCentreTx = yTx + aTx;
           pie.update();
           return;
+        }*/
+       // Reset (tap outside slices)
+        if (!els.length) {
+          focusOwner = null;
+          document.body.classList.remove("focus-aleeya","focus-yousef");
+          renderCentreKPI();
+          pie.data.datasets[0].offset = [0,0];
+          pie.update();
+          return;
         }
 
+
         // Expand selected slice
+        /*
         const i = els[0].index;
         ds.offset = [0,0];
         ds.offset[i] = 10;   // expansion amount (keeps centre aligned)
@@ -834,15 +929,33 @@ function summariseDescription(desc, type){
         }
 
         pie.update();
+        */
+
+        // Render PIE
+        const i = els[0].index;
+        const owner = i === 0 ? "yousef" : "aleeya";
+
+        focusOwner = owner;
+        document.body.classList.remove("focus-aleeya","focus-yousef");
+        document.body.classList.add(`focus-${owner}`);
+
+        pie.data.datasets[0].offset = [0,0];
+        pie.data.datasets[0].offset[i] = 10;
+
+        renderCentreKPI();
+        pie.update();
+
       }
     }
   });
 
   // Default centre state
-  animateNumber($("pcTotal"), pieCentreValue, ySpend + aSpend);
+  // animateNumber($("pcTotal"), pieCentreValue, ySpend + aSpend);
+  renderCentreKPI();
   pieCentreValue = ySpend + aSpend;
 
-  animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
+  // animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
+  renderCentreKPI();
   pieCentreTx = yTx + aTx;
 
   /* ---------- Refund allocation (UI-only) ---------- */
