@@ -765,12 +765,17 @@ function summariseDescription(desc, type){
     }
 
     /* ---------- PAYMENT ---------- */
+    let lastYousefPaymentDate = null;
+
     if (isPayment(r)) {
       const payment = Math.abs(amt);
 
-      // All payments reduce total liability (primary cardholder)
       yPaidGross += payment;
       b.ypg += payment;
+
+      if (!lastYousefPaymentDate || d > lastYousefPaymentDate) {
+        lastYousefPaymentDate = d;
+      }
 
       events.push({
         id: eventId++,
@@ -815,7 +820,7 @@ function summariseDescription(desc, type){
   function renderCentreKPI(){
     // GLOBAL VIEW
     if (!focusOwner) {
-      $("pcTitle").textContent = "Outstanding balance";
+      $("pcTitle").textContent = "Outstanding Balance";
 
       animateNumber(
         $("pcTotal"),
@@ -824,14 +829,8 @@ function summariseDescription(desc, type){
       );
       pieCentreValue = totalOutstanding;
 
-      animateInt(
-        $("pcTx"),
-        pieCentreTx,
-        yTx + aTx,
-        " transactions"
-      );
-      pieCentreTx = yTx + aTx;
-
+      // Make this dynamic as of max statement date 
+      $("pcTx").textContent = "Last Updated: Today";
       return;
     }
 
@@ -866,8 +865,15 @@ function summariseDescription(desc, type){
       );
       pieCentreValue = yousefOutstanding;
 
-      $("pcTx").textContent = "";
+      $("pcTx").textContent =
+        lastYousefPaymentDate
+          ? `Last payment ${lastYousefPaymentDate.toLocaleDateString(
+              "en-GB",
+              { day: "numeric", month: "short" }
+            )}`
+          : "No payments yet";
     }
+
   }
 
 
@@ -879,14 +885,15 @@ function summariseDescription(desc, type){
     data:{
       labels:["Yousef","Aleeya"],
       datasets:[{
-        data:[ySpend,aSpend],
+        data:[yousefOutstanding,aleeyaOutstanding],
         backgroundColor:[cssVar("--blue"), cssVar("--pink")],
         borderWidth:0,
         cutout:"68%",
         spacing:6,
         borderRadius:12,
         offset:[0,0],
-        radius:["100%","100%"]
+        radius:["100%","100%"],
+        rotation: -90 * (Math.PI / 180),
       }]
     },
     options:{
@@ -901,19 +908,6 @@ function summariseDescription(desc, type){
       onClick:(_,els)=>{
         const ds = pie.data.datasets[0];
 
-        // Reset (tap outside slices)
-        /*
-        if(!els.length){
-          ds.offset = [0,0];
-          ds.radius = ["100%","100%"];
-          $("pcTitle").textContent = "Total";
-          animateNumber($("pcTotal"), pieCentreValue, ySpend + aSpend);
-          pieCentreValue = ySpend + aSpend;
-          animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
-          pieCentreTx = yTx + aTx;
-          pie.update();
-          return;
-        }*/
        // Reset (tap outside slices)
         if (!els.length) {
           focusOwner = null;
@@ -924,33 +918,7 @@ function summariseDescription(desc, type){
         }
 
 
-        // Expand selected slice
-        /*
-        const i = els[0].index;
-        ds.offset = [0,0];
-        ds.offset[i] = 10;   // expansion amount (keeps centre aligned)
-
-        if(i === 0){
-          $("pcTitle").textContent = "Yousef";
-          animateNumber($("pcTotal"), pieCentreValue, ySpend);
-          pieCentreValue = ySpend;
-          
-          animateInt($("pcTx"), pieCentreTx, yTx, " transactions");
-          pieCentreTx = yTx;
-
-        } else {
-          $("pcTitle").textContent = "Aleeya";
-          animateNumber($("pcTotal"), pieCentreValue, aSpend);
-          pieCentreValue = aSpend; 
-          
-          animateInt($("pcTx"), pieCentreTx, aTx, " transactions");
-          pieCentreTx = aTx;
-        }
-
-        pie.update();
-        */
-
-        // Render PIE
+        // Expand selected slice      
         const i = els[0].index;
         const owner = i === 0 ? "yousef" : "aleeya";
 
