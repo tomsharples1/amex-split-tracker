@@ -512,6 +512,17 @@ const STOP_WORDS = new Set([
   "UK","WWW","COM","STORE","ONLINE","PURCHASE"
 ]);
 
+const MERCHANT_STOP_WORDS = new Set([
+  "THE","AND","OF","TO","FROM",
+  "PAYMENT","PAID","RECEIVED","THANK","YOU",
+  "CARD","PURCHASE","DEBIT","CREDIT",
+  "ONLINE","ORDER","POS","STORE",
+  "LIMITED","LTD","PLC","LLP",
+  "UK","GB","GBR","LONDON",
+  "WWW","COM","HTTP","HTTPS"
+]);
+
+
 function tokenize(desc){
   return new Set(
     String(desc || "")
@@ -527,6 +538,39 @@ function jaccard(a, b){
   for (const t of a) if (b.has(t)) inter++;
   return inter / Math.max(1, a.size + b.size - inter);
 }
+
+function normaliseMerchant(desc){
+  if (!desc) return "";
+
+  const tokens = desc
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter(t =>
+      t.length >= 3 &&
+      !MERCHANT_STOP_WORDS.has(t) &&
+      !/^\d+$/.test(t)
+    );
+
+  if (!tokens.length) return "";
+
+  // Prefer the strongest brand-like token(s)
+  // ASOS, AMAZON, UBER, STARBUCKS, etc
+  return tokens.slice(0, 2).join(" ");
+}
+
+function summariseDescription(desc, type){
+  if (type === "paid") return "Repayment";
+
+  const merchant = normaliseMerchant(desc);
+
+  if (type === "refund") {
+    return merchant ? `${merchant} refund` : "Refund";
+  }
+
+  return merchant || "Card spend";
+}
+
 
 
 (async()=>{
@@ -1020,7 +1064,7 @@ function jaccard(a, b){
         >
           <td>${e.d.toLocaleDateString("en-GB")}</td>
           <td><span class="badge">${displayType(e.type)}</span></td>
-          <td>${e.desc}</td>
+          <td>${summariseDescription(e.desc, e.type)}</td>
           <td>
             ${
               e.type === "spent" && refundMap.has(e.id)
