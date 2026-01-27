@@ -811,15 +811,27 @@ function summariseDescription(desc, type){
   // Pie chart rotation Dynamics 
   const isYousefSmaller = yousefOutstanding <= aleeyaOutstanding;
 
-  function getPieRotation() {
-    // Base rotation: start at top
-    const base = -90 * Math.PI / 180;
+  function getPieRotation(y, a) {
+    const total = (y || 0) + (a || 0);
+    if (total <= 0) return -Math.PI / 2; // default: start at top
 
-    // If Yousef is smaller, rotate so slice 0 (Yousef) sits left
-    // If Aleeya is smaller, rotate so slice 1 (Aleeya) sits right
-    return isYousefSmaller
-      ? base + Math.PI     // rotate 180° → smaller slice left
-      : base;              // default → smaller slice right
+    const TAU = Math.PI * 2;
+    const angleY = TAU * (y / total);
+    const angleA = TAU * (a / total);
+
+    const yousefIsSmaller = y <= a;
+
+    // We want the *center* of the smaller person's slice near their KPI:
+    // Yousef KPI is on the LEFT  -> target angle = π
+    // Aleeya KPI is on the RIGHT -> target angle = 0
+    if (yousefIsSmaller) {
+      const target = Math.PI;            // left
+      return target - (angleY / 2);      // slice 0 center to left
+    } else {
+      const target = 0;                  // right
+      // slice 1 starts after slice 0, so subtract angleY, then center slice 1
+      return target - angleY - (angleA / 2);
+    }
   }
 
 
@@ -906,10 +918,11 @@ function summariseDescription(desc, type){
         borderRadius:12,
         offset:[0,0],
         radius:["100%","100%"],
-        rotation: getPieRotation(),
       }]
     },
     options:{
+      rotation: getPieRotation(yousefOutstanding, aleeyaOutstanding),
+
       plugins:{
         legend:{display:false},
         tooltip:{enabled:false}
@@ -941,7 +954,7 @@ function summariseDescription(desc, type){
         pie.data.datasets[0].offset[i] = 10;
 
         renderCentreKPI();
-        pie.options.rotation = getPieRotation();
+        pie.options.rotation = getPieRotation(yousefOutstanding, aleeyaOutstanding);
         pie.update();
 
       }
