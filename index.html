@@ -844,52 +844,53 @@ function summariseDescription(desc, type){
   pieCentreTx = yTx + aTx;
 
   /* ---------- Refund allocation (UI-only) ---------- */
-  function applyRefundAllocations(events){
-    const spends = events
-      .filter(e => e.type === "spent")
-      .map(e => ({
-        ...e,
-        tokens: tokenize(e.desc),
-        remaining: e.amt
-      }));
+  function applyAtomicRefundMatching(events){
+  const spends = events
+    .filter(e => e.type === "spent")
+    .map(e => ({
+      ...e,
+      tokens: tokenize(e.desc),
+      remaining: e.amt,
+      refunded: false
+    }));
 
-    const refunds = groupRefunds(events);
+  const refunds = groupRefunds(events);
 
-    refunds.forEach(ref => {
-      let remainingRefund = ref.amount;
+  refunds.forEach(ref => {
+    // candidate spends: same vendor, before refund date, not refunded
+    const candidates = spends
+      .filter(s =>
+        !s.refunded &&
+        s.d <= ref.date
+      )
+      .map(s => ({
+        spend: s,
+        score: jaccard(ref.tokens, s.tokens)
+      }))
+      .filter(x => x.score >= 0.25)
+      .sort((a, b) =>
+        b.score - a.score ||     // best vendor match
+        b.spend.d - a.spend.d   // most recent first
+      );
 
-      const candidates = spends
-        .filter(s =>
-          s.remaining > 0 &&
-          s.d <= ref.date
-        )
-        .map(s => ({
-          spend: s,
-          score: jaccard(ref.tokens, s.tokens)
-        }))
-        .filter(x => x.score >= 0.25)
-        .sort((a,b) =>
-          b.score - a.score ||
-          b.spend.d - a.spend.d
-        );
-
-      for (const { spend } of candidates) {
-        if (remainingRefund <= 0) break;
-
-        const applied = Math.min(spend.remaining, remainingRefund);
-        spend.remaining -= applied;
-        remainingRefund -= applied;
-
-        spend.refundApplied =
-          (spend.refundApplied || 0) + applied;
+    for (const { spend } of candidates) {
+      
+      if (ref.amount <= spend.remaining) {
+        spend.remaining -= ref.amount;
+        spend.refundApplied = ref.amount;
+        spend.refunded = true;
+        break; // refund handled, move on
       }
-    });
+      // else: skip this spend and look further back
+    }
+  });
 
-    return spends;
-  }
+  return spends;
+}
+
 
   /* Build lookup for table rendering */
-  const refundedSpends = applyRefundAllocations(events);
+  const refundedSpends = applyAtomicRefundMatching(events);
   const refundMap = new Map(refundedSpends.map(s => [s.id, s]));
 
 
