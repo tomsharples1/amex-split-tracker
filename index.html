@@ -439,9 +439,11 @@ const cssVar = name =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 const GBP = n => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Math.max(0,n||0));
+
 const displayType = type =>
   type === "paid" ? "Paid" :
   type === "spent" ? "Spend" :
+  type === "refund" ? "Refund":
   type;
 
 const parseDate = s => {
@@ -1045,10 +1047,23 @@ function summariseDescription(desc, type){
   function renderTable(){
     $("aLedger").innerHTML = events
       .filter(e=>{
-        if(filter === "all") return true;
+        if(filter === "all") {
+          // hide refunds that aren't aleeya's 
+          if (e.type === "refund" && e.owner === "aleeya") return false;
+        return true;
+        }
         if(filter === "spent") return e.type === "spent";
         if(filter === "paid") return e.type === "paid" && e.owner === "aleeya" ;
-        if(filter === "due") return e.type === "spent" && !e.paidOff;
+        if (filter === "due") {
+          // Weird Due logic now we added complex refund attribution 
+          if (e.type !== "spent") return false;
+
+          // refunded to zero OR paid off → not outstanding
+          if (refundMap.has(e.id) && refundMap.get(e.id).remaining === 0) return false;
+          if (e.paidOff) return false;
+
+          return true;
+        }
       })
       .sort((a,b)=>b.d-a.d)
       .map(e => `
