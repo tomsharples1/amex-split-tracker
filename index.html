@@ -582,7 +582,8 @@ function stripRefundPairs(rows){
       type: "paid",
       desc: "Repayment",
       amt: -amt,
-      repaid: true
+      repaid: true, 
+      owner: "aleeya"
     });
   });
   /*
@@ -692,6 +693,7 @@ function stripRefundPairs(rows){
         desc: r.description,
         amt: -payment,
         repaid: true,
+        owner: "yousef"
       });
     }
   });
@@ -939,7 +941,7 @@ function stripRefundPairs(rows){
       .filter(e=>{
         if(filter === "all") return true;
         if(filter === "spent") return e.type === "spent";
-        if(filter === "paid") return e.type === "paid";
+        if(filter === "paid") return e.type === "paid" && e.owner === "aleeya" ;
         if(filter === "due") return e.type === "spent" && !e.paidOff;
       })
       .sort((a,b)=>b.d-a.d)
