@@ -808,11 +808,24 @@ function summariseDescription(desc, type){
   });
 
 
-
+  /*
   $("yp").textContent = GBP(Math.max(0, yPaidGross - aPaid));
   $("yr").textContent = GBP(ySpend - (yPaidGross - aPaid));
   $("ap").textContent = GBP(aPaid);
   $("ar").textContent = GBP(aSpend - aPaid);
+  */
+
+  // Numeric outstanding / repaid values (SOURCE OF TRUTH)
+  const yousefOutstanding = Math.max(0, ySpend - (yPaidGross - aPaid));
+  const aleeyaOutstanding = Math.max(0, aSpend - aPaid);
+  const totalOutstanding = yousefOutstanding + aleeyaOutstanding;
+
+  // Render KPIs
+  $("yp").textContent = GBP(Math.max(0, yPaidGross - aPaid));
+  $("yr").textContent = GBP(yousefOutstanding);
+  $("ap").textContent = GBP(aPaid);
+  $("ar").textContent = GBP(aleeyaOutstanding);
+
 
   /* Progress Bar */
   const aleeyaPct = aSpend ? (aPaid / aSpend) * 100 : 0;
@@ -823,33 +836,63 @@ function summariseDescription(desc, type){
 
 
   function renderCentreKPI(){
+    // GLOBAL VIEW
     if (!focusOwner) {
       $("pcTitle").textContent = "Outstanding balance";
-      animateNumber($("pcTotal"), pieCentreValue, yr + ar);
-      pieCentreValue = yr + ar;
-      animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
+
+      animateNumber(
+        $("pcTotal"),
+        pieCentreValue,
+        totalOutstanding
+      );
+      pieCentreValue = totalOutstanding;
+
+      animateInt(
+        $("pcTx"),
+        pieCentreTx,
+        yTx + aTx,
+        " transactions"
+      );
       pieCentreTx = yTx + aTx;
+
       return;
     }
 
+    // ALEEEYA FOCUS
     if (focusOwner === "aleeya") {
       $("pcTitle").textContent = "Aleeya owes";
-      animateNumber($("pcTotal"), pieCentreValue, ar);
-      pieCentreValue = ar;
+
+      animateNumber(
+        $("pcTotal"),
+        pieCentreValue,
+        aleeyaOutstanding
+      );
+      pieCentreValue = aleeyaOutstanding;
 
       $("pcTx").textContent =
         lastAleeyaPaymentDate
-          ? `Last payment ${lastAleeyaPaymentDate.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}`
+          ? `Last payment ${lastAleeyaPaymentDate.toLocaleDateString(
+              "en-GB",
+              { day: "numeric", month: "short" }
+            )}`
           : "No payments yet";
     }
 
+    // YOUSEF FOCUS
     if (focusOwner === "yousef") {
       $("pcTitle").textContent = "Yousef owes";
-      animateNumber($("pcTotal"), pieCentreValue, yr);
-      pieCentreValue = yr;
+
+      animateNumber(
+        $("pcTotal"),
+        pieCentreValue,
+        yousefOutstanding
+      );
+      pieCentreValue = yousefOutstanding;
+
       $("pcTx").textContent = "";
     }
   }
+
 
 
 
@@ -950,13 +993,7 @@ function summariseDescription(desc, type){
   });
 
   // Default centre state
-  // animateNumber($("pcTotal"), pieCentreValue, ySpend + aSpend);
   renderCentreKPI();
-  pieCentreValue = ySpend + aSpend;
-
-  // animateInt($("pcTx"), pieCentreTx, yTx + aTx, " transactions");
-  renderCentreKPI();
-  pieCentreTx = yTx + aTx;
 
   /* ---------- Refund allocation (UI-only) ---------- */
   function applyAtomicRefundMatching(events){
