@@ -585,12 +585,30 @@ function stripRefundPairs(rows){
       repaid: true
     });
   });
-
+  /*
   const aleeyaPaymentAmounts = new Set(
     payments
       .map(r => Math.round(Math.abs(+r.amount || 0) * 100))
       .filter(Boolean)
-  );
+  );*/
+
+  // Replace the Set with a count-map (in pennies)
+  const aleeyaPaymentCounts = new Map();
+  payments.forEach(r => {
+    const cents = Math.round(Math.abs(+r.amount || 0) * 100);
+    if (!cents) return;
+    aleeyaPaymentCounts.set(cents, (aleeyaPaymentCounts.get(cents) || 0) + 1);
+  });
+
+  function consumeAleeyaPaymentFor(amt) {
+    const cents = Math.round(Math.abs(amt) * 100);
+    const n = aleeyaPaymentCounts.get(cents) || 0;
+    if (n <= 0) return false;
+    if (n === 1) aleeyaPaymentCounts.delete(cents);
+    else aleeyaPaymentCounts.set(cents, n - 1);
+    return true;
+  }
+
 
   // Transaction Helpers 
   const isPayment = r =>
@@ -603,27 +621,6 @@ function stripRefundPairs(rows){
     r.amount > 0;
 
 
-  /*
-  activity.forEach(r=>{
-    const d=parseDate(r.date); if(!d) return;
-    const amt=+r.amount||0; if(!amt) return;
-    const m=monthKey(d),b=ensure(m);
-    const isA=/ALEEYA/i.test(r.card_member||"");
-    if(amt>0){
-      if(isA){aSpend+=amt;aTx++;b.as+=amt;
-        events.push({
-          id: eventId++,
-          d,
-          type:"spent",
-          desc:r.description,
-          amt,
-          paidOff: aleeyaPaymentAmounts.has(Math.round(amt * 100))
-        })}
-      else{ySpend+=amt;yTx++;b.ys+=amt}
-    }else if(!isA&&/PAYMENT/i.test(r.description)){
-      yPaidGross+=Math.abs(amt); b.ypg+=Math.abs(amt);
-    }
-  });*/
 
   activity.forEach(r => {
     const d = parseDate(r.date);
@@ -650,6 +647,7 @@ function stripRefundPairs(rows){
           type: "spent",
           desc: r.description,
           amt,
+          paidOff: consumeAleeyaPaymentFor(amt)
         });
       } else {
         ySpend += amt;
