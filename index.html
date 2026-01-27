@@ -72,30 +72,7 @@ h3{
 }
 .row{display:flex;justify-content:space-between;align-items:center;font-size:14px;margin-top:6px}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
-
-/* .kpiGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px} */
-.kpiGrid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  transition:all .35s ease;
-}
-
-/* Focus mode animations */
-body.focus-aleeya .kpi.yousef,
-body.focus-yousef .kpi.aleeya{
-  opacity:0;
-  transform:translateY(20px);
-  pointer-events:none;
-}
-
-body.focus-aleeya .kpi.aleeya,
-body.focus-yousef .kpi.yousef{
-  grid-column:1 / -1;
-  transform:translateY(-20px) scale(1.05);
-}
-
-
+.kpiGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .kpi{text-align:center}
 .mid{font-size:18px;font-weight:900}
 .mid.remaining{font-size:26px; letter-spacing:-.02em;}
@@ -940,7 +917,6 @@ function summariseDescription(desc, type){
        // Reset (tap outside slices)
         if (!els.length) {
           focusOwner = null;
-          document.body.classList.remove("focus-aleeya","focus-yousef");
           renderCentreKPI();
           pie.data.datasets[0].offset = [0,0];
           pie.update();
@@ -979,8 +955,6 @@ function summariseDescription(desc, type){
         const owner = i === 0 ? "yousef" : "aleeya";
 
         focusOwner = owner;
-        document.body.classList.remove("focus-aleeya","focus-yousef");
-        document.body.classList.add(`focus-${owner}`);
 
         pie.data.datasets[0].offset = [0,0];
         pie.data.datasets[0].offset[i] = 10;
