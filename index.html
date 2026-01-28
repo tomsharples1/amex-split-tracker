@@ -584,17 +584,6 @@ function summariseDescription(desc, type){
 }
 
 
-// Table selection helper 
-function getEffectiveAmount(e){
-  if (e.type === "spent" && refundMap.has(e.id)) {
-    const r = refundMap.get(e.id);
-    return typeof r.remaining === "number"
-      ? r.remaining
-      : Math.abs(e.amt); // fallback for non-refunded spend
-  }
-  return Math.abs(e.amt);
-}
-
 
 (async()=>{
   /*
@@ -1166,7 +1155,7 @@ function getEffectiveAmount(e){
   function updateSelectedKPI() {
     const total = events
       .filter(e => selectedRows.has(e.id))
-      .reduce((sum, e) => sum + getEffectiveAmount(e), 0);
+      .reduce((sum, e) => sum + Math.abs(e.amt), 0);
 
     $("selectedTotal").textContent = GBP(total);
   }
@@ -1236,27 +1225,20 @@ function getEffectiveAmount(e){
       `)
       .join("");
 
-   document.querySelectorAll("#aLedger tr").forEach(row => {
+    document.querySelectorAll("#aLedger tr").forEach(row => {
       row.onclick = () => {
         const id = Number(row.dataset.id);
-        const ev = events.find(x => x.id === id);
-        if (!ev) return;
-
-        const effective = getEffectiveAmount(ev);
-        if (effective === 0) return; // fully refunded → inert
 
         if (selectedRows.has(id)) {
           selectedRows.delete(id);
-          row.classList.remove("activeRow");
         } else {
           selectedRows.add(id);
-          row.classList.add("activeRow");
         }
 
         updateSelectedKPI();
+        renderTable();
       };
     });
-
   }
 
   $("fltAll").onclick=()=>{filter="all";setActive(fltAll);resetSelection();renderTable()};
