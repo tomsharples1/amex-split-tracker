@@ -584,6 +584,15 @@ function summariseDescription(desc, type){
 }
 
 
+// Table selection helper 
+function getEffectiveAmount(e){
+  if (e.type === "spent" && refundMap.has(e.id)) {
+    return refundMap.get(e.id).remaining;
+  }
+  return Math.abs(e.amt);
+}
+
+
 
 (async()=>{
   /*
@@ -1155,7 +1164,7 @@ function summariseDescription(desc, type){
   function updateSelectedKPI() {
     const total = events
       .filter(e => selectedRows.has(e.id))
-      .reduce((sum, e) => sum + Math.abs(e.amt), 0);
+      .reduce((sum, e) => sum + getEffectiveAmount(e), 0);
 
     $("selectedTotal").textContent = GBP(total);
   }
