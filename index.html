@@ -1238,10 +1238,15 @@ function getEffectiveAmount(e){
       row.onclick = () => {
         const id = Number(row.dataset.id);
 
-        if (selectedRows.has(id)) {
-          selectedRows.delete(id);
+        if (selectedRows.has(e.id)) {
+          selectedRows.delete(e.id);
+          row.classList.remove("sel");
         } else {
-          selectedRows.add(id);
+          const effective = getEffectiveAmount(e);
+          if (effective === 0) return; // don't select fully refunded rows
+
+          selectedRows.add(e.id);
+          row.classList.add("sel");
         }
 
         updateSelectedKPI();
