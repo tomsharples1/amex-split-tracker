@@ -221,6 +221,12 @@ canvas{max-width:100%}
   transform:scale(.97);
 }
 
+@media (hover: none) {
+  .segBtn:active {
+    transform: none;
+  }
+}
+
 
 .segBtn:not(:last-child){border-right:1px solid var(--border);}
 .segBtn.active{background:rgba(255,255,255,.08); color:var(--text);}
