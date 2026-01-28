@@ -587,11 +587,13 @@ function summariseDescription(desc, type){
 // Table selection helper 
 function getEffectiveAmount(e){
   if (e.type === "spent" && refundMap.has(e.id)) {
-    return refundMap.get(e.id).remaining;
+    const r = refundMap.get(e.id);
+    return typeof r.remaining === "number"
+      ? r.remaining
+      : Math.abs(e.amt); // fallback for non-refunded spend
   }
   return Math.abs(e.amt);
 }
-
 
 
 (async()=>{
